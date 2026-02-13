@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { WordPair, PracticeMode, ReviewedPair, PracticeConfig } from '@/types';
 import { calculateNextReview, getQualityFromCorrect } from '@/lib/spaced-repetition';
 
@@ -28,6 +28,12 @@ export function usePracticeSession({ pairs, config }: UsePracticeSessionProps): 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [reviewedPairs, setReviewedPairs] = useState<ReviewedPair[]>([]);
   const [queue, setQueue] = useState<WordPair[]>(() => shuffleArray([...pairs]));
+
+  useEffect(() => {
+    if (pairs.length > 0 && queue.length === 0) {
+      setQueue(shuffleArray([...pairs]));
+    }
+  }, [pairs]);
 
   const currentPair = queue[currentIndex] || null;
   const totalQuestions = queue.length;
