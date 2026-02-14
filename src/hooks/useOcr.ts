@@ -12,7 +12,7 @@ interface UseOcrReturn {
   parsedPairs: ParsedWordPair[];
   lowConfidencePairs: ParsedWordPair[];
   error: string | null;
-  process: (image: string | HTMLImageElement | Blob | File, languageCode: string) => Promise<void>;
+  process: (image: string | HTMLImageElement | Blob | File, languageCode: string) => Promise<{ valid: ParsedWordPair[]; lowConfidence: ParsedWordPair[] } | null>;
   reset: () => void;
 }
 
@@ -24,7 +24,7 @@ export function useOcr(): UseOcrReturn {
   const [lowConfidencePairs, setLowConfidencePairs] = useState<ParsedWordPair[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const process = useCallback(async (image: string | HTMLImageElement | Blob | File, languageCode: string) => {
+  const process = useCallback(async (image: string | HTMLImageElement | Blob | File, languageCode: string): Promise<{ valid: ParsedWordPair[]; lowConfidence: ParsedWordPair[] } | null> => {
     setIsProcessing(true);
     setProgress(0);
     setError(null);
@@ -41,8 +41,11 @@ export function useOcr(): UseOcrReturn {
 
       setParsedPairs(valid);
       setLowConfidencePairs(lowConfidence);
+
+      return { valid, lowConfidence };
     } catch (err) {
       setError(err instanceof Error ? err.message : 'OCR processing failed');
+      return null;
     } finally {
       setIsProcessing(false);
     }

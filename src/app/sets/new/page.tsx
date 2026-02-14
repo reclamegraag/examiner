@@ -30,6 +30,18 @@ export default function NewSetPage() {
 
   const languageOptions = languages.map(l => ({ value: l.code, label: l.name }));
 
+  const applyOcrResults = (result: { valid: typeof parsedPairs; lowConfidence: typeof lowConfidencePairs } | null) => {
+    if (!result) return;
+    const allPairs = [...result.valid, ...result.lowConfidence].map(p => ({
+      termA: p.termA,
+      termB: p.termB,
+    }));
+    if (allPairs.length > 0) {
+      setPairs(allPairs);
+    }
+    setShowOcrResults(true);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -37,8 +49,8 @@ export default function NewSetPage() {
     e.target.value = '';
 
     const lang = languages.find(l => l.code === languageA);
-    await process(file, lang?.tesseractCode || 'eng');
-    setShowOcrResults(true);
+    const result = await process(file, lang?.tesseractCode || 'eng');
+    applyOcrResults(result);
   };
 
   const handleCapture = async () => {
@@ -46,8 +58,8 @@ export default function NewSetPage() {
     if (!blob) return;
 
     const lang = languages.find(l => l.code === languageA);
-    await process(blob, lang?.tesseractCode || 'eng');
-    setShowOcrResults(true);
+    const result = await process(blob, lang?.tesseractCode || 'eng');
+    applyOcrResults(result);
     stop();
   };
 
@@ -228,32 +240,42 @@ export default function NewSetPage() {
           </AnimatePresence>
         </Card>
 
-        {showOcrResults && (parsedPairs.length > 0 || lowConfidencePairs.length > 0) && (
+        {showOcrResults && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
             <Card>
               <h3 className="text-lg font-semibold mb-4">OCR Resultaat</h3>
-              <p className="text-muted text-sm mb-4">
-                {parsedPairs.length} woordparen herkend
-                {lowConfidencePairs.length > 0 && `, ${lowConfidencePairs.length} met lage zekerheid`}
-              </p>
-              <WordPairEditor
-                pairs={[...parsedPairs, ...lowConfidencePairs].map(p => ({ termA: p.termA, termB: p.termB }))}
-                onChange={(updated) => {
-                  setPairs(updated);
-                }}
-                languageA={languageA.toUpperCase()}
-                languageB={languageB.toUpperCase()}
-              />
+              {parsedPairs.length > 0 || lowConfidencePairs.length > 0 ? (
+                <>
+                  <p className="text-muted text-sm mb-4">
+                    {parsedPairs.length} woordparen herkend
+                    {lowConfidencePairs.length > 0 && `, ${lowConfidencePairs.length} met lage zekerheid`}
+                  </p>
+                  <WordPairEditor
+                    pairs={[...parsedPairs, ...lowConfidencePairs].map(p => ({ termA: p.termA, termB: p.termB }))}
+                    onChange={(updated) => {
+                      setPairs(updated);
+                    }}
+                    languageA={languageA.toUpperCase()}
+                    languageB={languageB.toUpperCase()}
+                  />
+                </>
+              ) : (
+                <p className="text-muted text-sm mb-4">
+                  Geen woordparen gevonden. Probeer een andere afbeelding of voer de woorden handmatig in.
+                </p>
+              )}
               <div className="flex gap-3 mt-4">
                 <Button variant="secondary" onClick={() => { setShowOcrResults(false); resetOcr(); }}>
                   Opnieuw
                 </Button>
-                <Button onClick={handleOcrConfirm}>
-                  Gebruiken
-                </Button>
+                {(parsedPairs.length > 0 || lowConfidencePairs.length > 0) && (
+                  <Button onClick={handleOcrConfirm}>
+                    Gebruiken
+                  </Button>
+                )}
               </div>
             </Card>
           </motion.div>
