@@ -7,7 +7,8 @@ import { Button, Card, Input, Select } from '@/components/ui';
 import { WordPairEditor } from '@/components/sets';
 import { useCreateWordSet, useOcr, useCamera } from '@/hooks';
 import { languages } from '@/lib/languages';
-import { faCamera, faKeyboard, faImage, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { getGeminiApiKey, setGeminiApiKey } from '@/lib/settings';
+import { faCamera, faKeyboard, faImage, faSpinner, faKey } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 type InputMode = 'manual' | 'upload' | 'camera';
@@ -25,27 +26,55 @@ export default function NewSetPage() {
   const [pairs, setPairs] = useState<{ termA: string; termB: string }[]>([{ termA: '', termB: '' }]);
   const [isSaving, setIsSaving] = useState(false);
   const [showOcrResults, setShowOcrResults] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const hasApiKey = typeof window !== 'undefined' && !!getGeminiApiKey();
+
   const languageOptions = languages.map(l => ({ value: l.code, label: l.name }));
+
+  const applyOcrResults = (result: { valid: typeof parsedPairs; lowConfidence: typeof lowConfidencePairs } | null) => {
+    if (!result) return;
+    const allPairs = [...result.valid, ...result.lowConfidence].map(p => ({
+      termA: p.termA,
+      termB: p.termB,
+    }));
+    if (allPairs.length > 0) {
+      setPairs(allPairs);
+    }
+    setShowOcrResults(true);
+  };
+
+  const getOcrLangs = () => {
+    const langA = languages.find(l => l.code === languageA);
+    const langB = languages.find(l => l.code === languageB);
+    const codeA = langA?.tesseractCode || 'eng';
+    const codeB = langB?.tesseractCode || 'nld';
+    return codeA === codeB ? codeA : `${codeA}+${codeB}`;
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const lang = languages.find(l => l.code === languageA);
-    await process(file, lang?.tesseractCode || 'eng');
-    setShowOcrResults(true);
+    e.target.value = '';
+
+    const langAName = languages.find(l => l.code === languageA)?.name || languageA;
+    const langBName = languages.find(l => l.code === languageB)?.name || languageB;
+    const result = await process(file, getOcrLangs(), langAName, langBName);
+    applyOcrResults(result);
   };
 
   const handleCapture = async () => {
     const blob = await capture();
     if (!blob) return;
 
-    const lang = languages.find(l => l.code === languageA);
-    await process(blob, lang?.tesseractCode || 'eng');
-    setShowOcrResults(true);
+    const langAName = languages.find(l => l.code === languageA)?.name || languageA;
+    const langBName = languages.find(l => l.code === languageB)?.name || languageB;
+    const result = await process(blob, getOcrLangs(), langAName, langBName);
+    applyOcrResults(result);
     stop();
   };
 
@@ -115,6 +144,44 @@ export default function NewSetPage() {
                 onChange={e => setLanguageB(e.target.value)}
                 options={languageOptions}
               />
+            </div>
+
+            <div className="border-t border-border pt-4">
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors"
+              >
+                <FontAwesomeIcon icon={faKey} className="w-3 h-3" />
+                {hasApiKey ? 'Gemini AI OCR actief' : 'AI OCR instellen (optioneel)'}
+              </button>
+              {showApiKey && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs text-muted">
+                    Gratis Gemini API key van ai.google.dev voor betere OCR herkenning.
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      value={apiKey}
+                      onChange={e => setApiKey(e.target.value)}
+                      placeholder={hasApiKey ? '••••••••' : 'Plak je Gemini API key'}
+                      type="password"
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setGeminiApiKey(apiKey);
+                        setApiKey('');
+                        setShowApiKey(false);
+                      }}
+                      disabled={!apiKey.trim()}
+                    >
+                      Opslaan
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </Card>
@@ -226,32 +293,42 @@ export default function NewSetPage() {
           </AnimatePresence>
         </Card>
 
-        {showOcrResults && (parsedPairs.length > 0 || lowConfidencePairs.length > 0) && (
+        {showOcrResults && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
             <Card>
               <h3 className="text-lg font-semibold mb-4">OCR Resultaat</h3>
-              <p className="text-muted text-sm mb-4">
-                {parsedPairs.length} woordparen herkend
-                {lowConfidencePairs.length > 0 && `, ${lowConfidencePairs.length} met lage zekerheid`}
-              </p>
-              <WordPairEditor
-                pairs={[...parsedPairs, ...lowConfidencePairs].map(p => ({ termA: p.termA, termB: p.termB }))}
-                onChange={(updated) => {
-                  setPairs(updated);
-                }}
-                languageA={languageA.toUpperCase()}
-                languageB={languageB.toUpperCase()}
-              />
+              {parsedPairs.length > 0 || lowConfidencePairs.length > 0 ? (
+                <>
+                  <p className="text-muted text-sm mb-4">
+                    {parsedPairs.length} woordparen herkend
+                    {lowConfidencePairs.length > 0 && `, ${lowConfidencePairs.length} met lage zekerheid`}
+                  </p>
+                  <WordPairEditor
+                    pairs={[...parsedPairs, ...lowConfidencePairs].map(p => ({ termA: p.termA, termB: p.termB }))}
+                    onChange={(updated) => {
+                      setPairs(updated);
+                    }}
+                    languageA={languageA.toUpperCase()}
+                    languageB={languageB.toUpperCase()}
+                  />
+                </>
+              ) : (
+                <p className="text-muted text-sm mb-4">
+                  Geen woordparen gevonden. Probeer een andere afbeelding of voer de woorden handmatig in.
+                </p>
+              )}
               <div className="flex gap-3 mt-4">
                 <Button variant="secondary" onClick={() => { setShowOcrResults(false); resetOcr(); }}>
                   Opnieuw
                 </Button>
-                <Button onClick={handleOcrConfirm}>
-                  Gebruiken
-                </Button>
+                {(parsedPairs.length > 0 || lowConfidencePairs.length > 0) && (
+                  <Button onClick={handleOcrConfirm}>
+                    Gebruiken
+                  </Button>
+                )}
               </div>
             </Card>
           </motion.div>

@@ -58,6 +58,30 @@ describe('ocr-parser', () => {
       expect(result[0].termB).toBe('kat');
     });
 
+    it('parses double-space separated word pairs', () => {
+      const lines: OcrLine[] = [
+        { text: 'cat  kat', confidence: 75, words: [] },
+      ];
+
+      const result = parseOcrLines(lines);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].termA).toBe('cat');
+      expect(result[0].termB).toBe('kat');
+    });
+
+    it('splits in half when no separator is found for 3+ words', () => {
+      const lines: OcrLine[] = [
+        { text: 'het huis house', confidence: 70, words: [] },
+      ];
+
+      const result = parseOcrLines(lines);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].termA).toBe('het huis');
+      expect(result[0].termB).toBe('house');
+    });
+
     it('splits in half when no separator is found for 4+ words', () => {
       const lines: OcrLine[] = [
         { text: 'the cat is black', confidence: 70, words: [] },
@@ -68,6 +92,24 @@ describe('ocr-parser', () => {
       expect(result).toHaveLength(1);
       expect(result[0].termA).toBe('the cat');
       expect(result[0].termB).toBe('is black');
+    });
+
+    it('pairs consecutive lines when OCR reads columns separately', () => {
+      const lines: OcrLine[] = [
+        { text: 'cat', confidence: 90, words: [] },
+        { text: 'dog', confidence: 85, words: [] },
+        { text: 'bird', confidence: 80, words: [] },
+        { text: 'kat', confidence: 90, words: [] },
+        { text: 'hond', confidence: 85, words: [] },
+        { text: 'vogel', confidence: 80, words: [] },
+      ];
+
+      const result = parseOcrLines(lines);
+
+      expect(result).toHaveLength(3);
+      expect(result[0]).toMatchObject({ termA: 'cat', termB: 'kat' });
+      expect(result[1]).toMatchObject({ termA: 'dog', termB: 'hond' });
+      expect(result[2]).toMatchObject({ termA: 'bird', termB: 'vogel' });
     });
 
     it('returns null for empty lines', () => {
