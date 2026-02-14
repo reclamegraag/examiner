@@ -19,7 +19,7 @@ export function ProgressBar({
   size = 'md',
   className = ''
 }: ProgressBarProps) {
-  const percentage = Math.min(100, Math.max(0, (value / max) * 100));
+  const percentage = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
 
   const colors = {
     accent: 'bg-accent',
@@ -73,7 +73,7 @@ export function CircularProgress({
   showValue = true,
   className = '',
 }: CircularProgressProps) {
-  const percentage = Math.min(100, Math.max(0, (value / max) * 100));
+  const percentage = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (percentage / 100) * circumference;
