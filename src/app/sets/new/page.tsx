@@ -7,7 +7,8 @@ import { Button, Card, Input, Select } from '@/components/ui';
 import { WordPairEditor } from '@/components/sets';
 import { useCreateWordSet, useOcr, useCamera } from '@/hooks';
 import { languages } from '@/lib/languages';
-import { faCamera, faKeyboard, faImage, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { getGeminiApiKey, setGeminiApiKey } from '@/lib/settings';
+import { faCamera, faKeyboard, faImage, faSpinner, faKey } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 type InputMode = 'manual' | 'upload' | 'camera';
@@ -25,8 +26,12 @@ export default function NewSetPage() {
   const [pairs, setPairs] = useState<{ termA: string; termB: string }[]>([{ termA: '', termB: '' }]);
   const [isSaving, setIsSaving] = useState(false);
   const [showOcrResults, setShowOcrResults] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const hasApiKey = typeof window !== 'undefined' && !!getGeminiApiKey();
 
   const languageOptions = languages.map(l => ({ value: l.code, label: l.name }));
 
@@ -56,7 +61,9 @@ export default function NewSetPage() {
 
     e.target.value = '';
 
-    const result = await process(file, getOcrLangs());
+    const langAName = languages.find(l => l.code === languageA)?.name || languageA;
+    const langBName = languages.find(l => l.code === languageB)?.name || languageB;
+    const result = await process(file, getOcrLangs(), langAName, langBName);
     applyOcrResults(result);
   };
 
@@ -64,7 +71,9 @@ export default function NewSetPage() {
     const blob = await capture();
     if (!blob) return;
 
-    const result = await process(blob, getOcrLangs());
+    const langAName = languages.find(l => l.code === languageA)?.name || languageA;
+    const langBName = languages.find(l => l.code === languageB)?.name || languageB;
+    const result = await process(blob, getOcrLangs(), langAName, langBName);
     applyOcrResults(result);
     stop();
   };
@@ -135,6 +144,44 @@ export default function NewSetPage() {
                 onChange={e => setLanguageB(e.target.value)}
                 options={languageOptions}
               />
+            </div>
+
+            <div className="border-t border-border pt-4">
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors"
+              >
+                <FontAwesomeIcon icon={faKey} className="w-3 h-3" />
+                {hasApiKey ? 'Gemini AI OCR actief' : 'AI OCR instellen (optioneel)'}
+              </button>
+              {showApiKey && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs text-muted">
+                    Gratis Gemini API key van ai.google.dev voor betere OCR herkenning.
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      value={apiKey}
+                      onChange={e => setApiKey(e.target.value)}
+                      placeholder={hasApiKey ? '••••••••' : 'Plak je Gemini API key'}
+                      type="password"
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setGeminiApiKey(apiKey);
+                        setApiKey('');
+                        setShowApiKey(false);
+                      }}
+                      disabled={!apiKey.trim()}
+                    >
+                      Opslaan
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </Card>
