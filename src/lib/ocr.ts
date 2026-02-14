@@ -3,6 +3,8 @@ import type { OcrResult, OcrLine, OcrWord } from '@/types';
 
 const workerCache: Map<string, Worker> = new Map();
 
+let currentProgressCallback: ((progress: number) => void) | undefined;
+
 interface TesseractWord {
   text: string;
   confidence: number;
@@ -26,7 +28,11 @@ export async function getWorker(languageCode: string): Promise<Worker> {
   if (cached) return cached;
 
   const worker = await createWorker(languageCode, 1, {
-    logger: m => console.log(m),
+    logger: (m: { status: string; progress: number }) => {
+      if (m.status === 'recognizing text' && currentProgressCallback) {
+        currentProgressCallback(m.progress);
+      }
+    },
   });
 
   workerCache.set(languageCode, worker);
@@ -38,9 +44,11 @@ export async function processImage(
   languageCode: string,
   onProgress?: (progress: number) => void
 ): Promise<OcrResult> {
+  currentProgressCallback = onProgress;
   const worker = await getWorker(languageCode);
 
   const result = await worker.recognize(image);
+  currentProgressCallback = undefined;
   const data = result.data as TesseractData;
 
   const lines: OcrLine[] = [];

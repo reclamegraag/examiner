@@ -34,6 +34,8 @@ export default function NewSetPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    e.target.value = '';
+
     const lang = languages.find(l => l.code === languageA);
     await process(file, lang?.tesseractCode || 'eng');
     setShowOcrResults(true);
