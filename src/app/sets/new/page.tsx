@@ -42,14 +42,21 @@ export default function NewSetPage() {
     setShowOcrResults(true);
   };
 
+  const getOcrLangs = () => {
+    const langA = languages.find(l => l.code === languageA);
+    const langB = languages.find(l => l.code === languageB);
+    const codeA = langA?.tesseractCode || 'eng';
+    const codeB = langB?.tesseractCode || 'nld';
+    return codeA === codeB ? codeA : `${codeA}+${codeB}`;
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     e.target.value = '';
 
-    const lang = languages.find(l => l.code === languageA);
-    const result = await process(file, lang?.tesseractCode || 'eng');
+    const result = await process(file, getOcrLangs());
     applyOcrResults(result);
   };
 
@@ -57,8 +64,7 @@ export default function NewSetPage() {
     const blob = await capture();
     if (!blob) return;
 
-    const lang = languages.find(l => l.code === languageA);
-    const result = await process(blob, lang?.tesseractCode || 'eng');
+    const result = await process(blob, getOcrLangs());
     applyOcrResults(result);
     stop();
   };
