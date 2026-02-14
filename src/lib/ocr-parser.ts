@@ -15,6 +15,28 @@ export function parseOcrLines(lines: OcrLine[]): ParsedWordPair[] {
     }
   }
 
+  if (pairs.length > 0) return pairs;
+
+  // Fallback: if no pairs found on individual lines, try pairing
+  // consecutive non-empty lines (handles columnar OCR output)
+  const nonEmpty = lines
+    .map((line, i) => ({ line, index: i }))
+    .filter(({ line }) => line.text.trim().length > 0);
+
+  if (nonEmpty.length >= 2 && nonEmpty.length % 2 === 0) {
+    const half = nonEmpty.length / 2;
+    for (let i = 0; i < half; i++) {
+      const a = nonEmpty[i];
+      const b = nonEmpty[i + half];
+      pairs.push({
+        termA: a.line.text.trim(),
+        termB: b.line.text.trim(),
+        confidence: Math.min(a.line.confidence, b.line.confidence),
+        line: a.index,
+      });
+    }
+  }
+
   return pairs;
 }
 
@@ -46,7 +68,7 @@ function parseLine(text: string, lineIndex: number): { termA: string; termB: str
     };
   }
 
-  const multiSpaceMatch = trimmed.match(/^(.+?)\s{3,}(.+)$/);
+  const multiSpaceMatch = trimmed.match(/^(.+?)\s{2,}(.+)$/);
   if (multiSpaceMatch) {
     return {
       termA: multiSpaceMatch[1].trim(),
@@ -55,7 +77,7 @@ function parseLine(text: string, lineIndex: number): { termA: string; termB: str
   }
 
   const words = trimmed.split(/\s+/);
-  if (words.length >= 4) {
+  if (words.length >= 3) {
     const mid = Math.ceil(words.length / 2);
     return {
       termA: words.slice(0, mid).join(' '),
