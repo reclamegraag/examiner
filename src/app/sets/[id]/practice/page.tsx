@@ -155,7 +155,7 @@ export default function PracticeSetupPage({ params }: { params: Promise<{ id: st
           <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => setDirection('a-to-b')}
-              className={`p-2.5 rounded-xl border-2 text-sm font-bold transition-all cursor-pointer ${
+              className={`p-2.5 rounded-xl border-2 text-sm font-bold transition-all cursor-pointer truncate ${
                 direction === 'a-to-b'
                   ? 'border-accent bg-accent-light text-foreground shadow-brutal-sm'
                   : 'border-border text-muted hover:border-border-bold'
@@ -165,7 +165,7 @@ export default function PracticeSetupPage({ params }: { params: Promise<{ id: st
             </button>
             <button
               onClick={() => setDirection('b-to-a')}
-              className={`p-2.5 rounded-xl border-2 text-sm font-bold transition-all cursor-pointer ${
+              className={`p-2.5 rounded-xl border-2 text-sm font-bold transition-all cursor-pointer truncate ${
                 direction === 'b-to-a'
                   ? 'border-accent bg-accent-light text-foreground shadow-brutal-sm'
                   : 'border-border text-muted hover:border-border-bold'
@@ -175,7 +175,7 @@ export default function PracticeSetupPage({ params }: { params: Promise<{ id: st
             </button>
             <button
               onClick={() => setDirection('random')}
-              className={`p-2.5 rounded-xl border-2 text-sm font-bold transition-all cursor-pointer ${
+              className={`p-2.5 rounded-xl border-2 text-sm font-bold transition-all cursor-pointer truncate ${
                 direction === 'random'
                   ? 'border-accent bg-accent-light text-foreground shadow-brutal-sm'
                   : 'border-border text-muted hover:border-border-bold'

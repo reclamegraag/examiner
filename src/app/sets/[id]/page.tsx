@@ -146,7 +146,7 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
         </Card>
 
         <div className="flex gap-3 mb-6">
-          <Link href={`/sets/${setId}/practice`} className="flex-1">
+          <Link href={`/sets/${setId}/practice`} className="flex-1 min-w-0">
             <Button size="lg" className="w-full" icon={<FontAwesomeIcon icon={faPlay} />}>
               Start oefenen
             </Button>

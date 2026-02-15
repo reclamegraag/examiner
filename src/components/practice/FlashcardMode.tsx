@@ -122,7 +122,7 @@ export function FlashcardMode({
             exit={{ opacity: 0, y: 20 }}
             className="p-4 pb-8"
           >
-            <div className="flex gap-3 max-w-sm mx-auto">
+            <div className="flex flex-wrap gap-3 max-w-sm mx-auto">
               <Button
                 variant="danger"
                 size="lg"
