@@ -114,7 +114,7 @@ export function QuickMode({ pairs, config, set }: QuickModeProps) {
           <p className="text-sm text-muted mb-6 font-medium">
             {sessionStats.correct} goed, {sessionStats.incorrect} fout
           </p>
-          <div className="flex gap-3 max-w-xs mx-auto">
+          <div className="flex flex-wrap gap-3 max-w-xs mx-auto justify-center">
             <Button
               variant="secondary"
               onClick={handleReset}
@@ -194,7 +194,7 @@ export function QuickMode({ pairs, config, set }: QuickModeProps) {
           animate={{ opacity: 1, y: 0 }}
           className="p-4 pb-8"
         >
-          <div className="flex gap-3 max-w-sm mx-auto">
+          <div className="flex flex-wrap gap-3 max-w-sm mx-auto">
             <Button
               variant="danger"
               size="lg"

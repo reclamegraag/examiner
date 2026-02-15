@@ -158,13 +158,13 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
             <div className="flex gap-3">
               <button
                 onClick={reset}
-                className="flex-1 px-4 py-2.5 bg-card border-2 border-border-bold rounded-xl text-foreground font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                className="flex-1 min-w-0 px-4 py-2.5 bg-card border-2 border-border-bold rounded-xl text-foreground font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
               >
                 Opnieuw
               </button>
               <a
                 href={`/sets/${setId}`}
-                className="flex-1 px-4 py-2.5 bg-accent border-2 border-border-bold text-white rounded-xl font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-center"
+                className="flex-1 min-w-0 px-4 py-2.5 bg-accent border-2 border-border-bold text-white rounded-xl font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-center"
               >
                 Terug
               </a>
