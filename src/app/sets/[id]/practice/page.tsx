@@ -4,9 +4,9 @@ import { useState, useMemo, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Button, Card } from '@/components/ui';
-import { useWordSet, useWordPairs } from '@/hooks';
-import { faPlay, faArrowLeft, faLayerGroup, faKeyboard, faList, faBolt, faRotate } from '@fortawesome/free-solid-svg-icons';
+import { Button, Card, Modal } from '@/components/ui';
+import { useWordSet, useWordPairs, useResetWordPairStats } from '@/hooks';
+import { faPlay, faArrowLeft, faLayerGroup, faKeyboard, faList, faBolt, faRotate, faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { PracticeMode } from '@/types';
 
@@ -24,10 +24,18 @@ export default function PracticeSetupPage({ params }: { params: Promise<{ id: st
 
   const { set } = useWordSet(setId);
   const { pairs } = useWordPairs(setId);
+  const { resetStats } = useResetWordPairStats();
 
   const [mode, setMode] = useState<PracticeMode>('flashcard');
   const [direction, setDirection] = useState<'a-to-b' | 'b-to-a' | 'random'>('a-to-b');
   const [mistakesOnly, setMistakesOnly] = useState(false);
+  const [resetModal, setResetModal] = useState(false);
+
+  const handleResetStats = async () => {
+    await resetStats(setId);
+    setMistakesOnly(false);
+    setResetModal(false);
+  };
 
   const mistakePairs = useMemo(
     () => pairs.filter(p => p.incorrectCount > 0),
@@ -96,6 +104,22 @@ export default function PracticeSetupPage({ params }: { params: Promise<{ id: st
             <p className="text-sm text-warning font-medium mt-2 px-1">
               Je hebt nog geen fouten gemaakt. Oefen eerst de hele set!
             </p>
+          )}
+          {pairs.some(p => p.correctCount > 0 || p.incorrectCount > 0) && (
+            <button
+              onClick={() => setResetModal(true)}
+              className="w-full flex items-center gap-3 p-3 rounded-xl border-2 border-border hover:border-border-bold transition-all cursor-pointer mt-2"
+            >
+              <div className="p-2 rounded-lg border-2 bg-background border-border">
+                <FontAwesomeIcon icon={faArrowsRotate} className="w-4 h-4" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="font-bold text-muted">Reset scores</p>
+                <p className="text-xs text-muted">
+                  Wis alle scores en begin opnieuw
+                </p>
+              </div>
+            </button>
           )}
         </Card>
 
@@ -172,6 +196,20 @@ export default function PracticeSetupPage({ params }: { params: Promise<{ id: st
           Start oefenen
         </Button>
       </motion.div>
+
+      <Modal isOpen={resetModal} onClose={() => setResetModal(false)} title="Scores resetten?" size="sm">
+        <p className="text-muted mb-6 font-medium">
+          Alle scores worden gewist. Je kunt daarna opnieuw testen of je alles weet.
+        </p>
+        <div className="flex gap-3">
+          <Button variant="secondary" className="flex-1" onClick={() => setResetModal(false)}>
+            Annuleren
+          </Button>
+          <Button variant="danger" className="flex-1" onClick={handleResetStats}>
+            Resetten
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

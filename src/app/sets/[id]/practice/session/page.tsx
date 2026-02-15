@@ -136,6 +136,8 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
   if (isComplete) {
     const stats = getStats();
     const scorePercent = stats.total > 0 ? stats.correct / stats.total : 0;
+    const isMistakesMode = filter === 'mistakes';
+    const allWordsUrl = `/sets/${setId}/practice/session?${new URLSearchParams({ mode, direction })}`;
 
     return (
       <div className="max-w-lg mx-auto px-4 py-8 bg-background min-h-screen flex items-center">
@@ -152,19 +154,29 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
           <p className="text-muted mb-6 font-medium">
             <span className="font-bold text-foreground">{stats.correct}</span> van <span className="font-bold text-foreground">{stats.total}</span> goed ({stats.percentage}%)
           </p>
-          <div className="flex gap-3 max-w-xs mx-auto">
-            <button
-              onClick={reset}
-              className="flex-1 px-4 py-2.5 bg-card border-2 border-border-bold rounded-xl text-foreground font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-            >
-              Opnieuw
-            </button>
-            <a
-              href={`/sets/${setId}`}
-              className="flex-1 px-4 py-2.5 bg-accent border-2 border-border-bold text-white rounded-xl font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-center"
-            >
-              Terug
-            </a>
+          <div className="flex flex-col gap-3 max-w-xs mx-auto">
+            <div className="flex gap-3">
+              <button
+                onClick={reset}
+                className="flex-1 px-4 py-2.5 bg-card border-2 border-border-bold rounded-xl text-foreground font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+              >
+                Opnieuw
+              </button>
+              <a
+                href={`/sets/${setId}`}
+                className="flex-1 px-4 py-2.5 bg-accent border-2 border-border-bold text-white rounded-xl font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-center"
+              >
+                Terug
+              </a>
+            </div>
+            {isMistakesMode && (
+              <a
+                href={allWordsUrl}
+                className="px-4 py-2.5 bg-card border-2 border-border-bold rounded-xl text-foreground font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-center"
+              >
+                Oefen alle woorden
+              </a>
+            )}
           </div>
         </div>
       </div>

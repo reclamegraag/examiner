@@ -151,3 +151,24 @@ export function useCreatePracticeSession() {
 
   return { create };
 }
+
+export function useResetWordPairStats() {
+  const resetStats = async (setId: number) => {
+    const pairs = await db.wordPairs.where('setId').equals(setId).toArray();
+    const now = new Date();
+    await Promise.all(
+      pairs.map(p =>
+        db.wordPairs.update(p.id!, {
+          correctCount: 0,
+          incorrectCount: 0,
+          easeFactor: 2.5,
+          interval: 0,
+          nextReview: now,
+          lastPractice: undefined,
+        })
+      )
+    );
+  };
+
+  return { resetStats };
+}
