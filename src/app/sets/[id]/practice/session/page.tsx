@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { use } from 'react';
+import { use, useRef, useEffect } from 'react';
 import { useWordSet, useWordPairs, usePracticeSession, useUpdateWordPair, useCreatePracticeSession } from '@/hooks';
 import { FlashcardMode } from '@/components/practice/FlashcardMode';
 import { TypingMode } from '@/components/practice/TypingMode';
@@ -67,19 +67,30 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
     next();
   };
 
-  const handleComplete = async () => {
-    const stats = getStats();
-    await createSession({
-      setId,
-      mode,
-      startedAt: new Date(),
-      completedAt: new Date(),
-      totalQuestions: stats.total,
-      correctAnswers: stats.correct,
-      incorrectAnswers: stats.incorrect,
-      reviewedPairs,
-    });
-  };
+  const sessionSaved = useRef(false);
+
+  useEffect(() => {
+    if (isComplete && !sessionSaved.current) {
+      sessionSaved.current = true;
+      const stats = getStats();
+      createSession({
+        setId,
+        mode,
+        startedAt: new Date(),
+        completedAt: new Date(),
+        totalQuestions: stats.total,
+        correctAnswers: stats.correct,
+        incorrectAnswers: stats.incorrect,
+        reviewedPairs,
+      });
+    }
+  }, [isComplete]);
+
+  useEffect(() => {
+    if (!isComplete) {
+      sessionSaved.current = false;
+    }
+  }, [isComplete]);
 
   if (!set || pairs.length === 0) {
     return (
@@ -101,8 +112,6 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
   };
 
   if (isComplete) {
-    handleComplete();
-
     const stats = getStats();
     const scorePercent = stats.total > 0 ? stats.correct / stats.total : 0;
 
