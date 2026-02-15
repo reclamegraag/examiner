@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button, Card, CircularProgress } from '@/components/ui';
 import { SetCard, SetCardSkeleton } from '@/components/sets';
-import { useWordSets, useWordPairs } from '@/hooks';
+import { useWordSets, useWordPairs, useAllPracticeSessions } from '@/hooks';
 import { faGraduationCap, faPlus, faArrowRight, faBookOpen, faFire, faTrophy } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
@@ -23,8 +23,15 @@ const item = {
 
 export default function Dashboard() {
   const { sets, isLoading } = useWordSets();
+  const { sessions } = useAllPracticeSessions();
 
   const recentSets = sets.slice(0, 3);
+
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
+  startOfWeek.setHours(0, 0, 0, 0);
+  const sessionsThisWeek = sessions.filter(s => new Date(s.startedAt) >= startOfWeek).length;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 md:py-8">
@@ -138,14 +145,14 @@ export default function Dashboard() {
                 <div className="w-8 h-8 bg-warning rounded-lg border-2 border-border-bold mx-auto mb-2 flex items-center justify-center">
                   <FontAwesomeIcon icon={faFire} className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">0</p>
+                <p className="text-2xl font-bold text-foreground">{sessionsThisWeek}</p>
                 <p className="text-xs text-muted font-bold uppercase tracking-wide">Deze week</p>
               </div>
               <div className="bg-success-light rounded-xl p-3 border-2 border-success/30">
                 <div className="w-8 h-8 bg-success rounded-lg border-2 border-border-bold mx-auto mb-2 flex items-center justify-center">
                   <FontAwesomeIcon icon={faTrophy} className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">0</p>
+                <p className="text-2xl font-bold text-foreground">{sessions.length}</p>
                 <p className="text-xs text-muted font-bold uppercase tracking-wide">Oefeningen</p>
               </div>
             </div>
