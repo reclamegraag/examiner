@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { use, useRef, useEffect } from 'react';
+import { use, useRef, useEffect, useMemo } from 'react';
 import { useWordSet, useWordPairs, usePracticeSession, useUpdateWordPair, useCreatePracticeSession } from '@/hooks';
 import { FlashcardMode } from '@/components/practice/FlashcardMode';
 import { TypingMode } from '@/components/practice/TypingMode';
@@ -23,6 +23,14 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
 
   const mode = (searchParams.get('mode') as PracticeMode) || 'flashcard';
   const direction = (searchParams.get('direction') as 'a-to-b' | 'b-to-a' | 'random') || 'a-to-b';
+  const filter = searchParams.get('filter');
+
+  const filteredPairs = useMemo(() => {
+    if (filter === 'mistakes') {
+      return pairs.filter(p => p.incorrectCount > 0);
+    }
+    return pairs;
+  }, [pairs, filter]);
 
   const config: PracticeConfig = {
     mode,
@@ -45,7 +53,7 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
     next,
     reset,
     getStats,
-  } = usePracticeSession({ pairs, config });
+  } = usePracticeSession({ pairs: filteredPairs, config });
 
   const handleAnswer = async (isCorrect: boolean, timeMs?: number) => {
     answer(isCorrect, timeMs);
@@ -96,6 +104,20 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
     return (
       <div className="max-w-lg mx-auto px-4 py-8">
         <p className="text-muted text-center font-medium">Geen woorden gevonden</p>
+      </div>
+    );
+  }
+
+  if (filteredPairs.length === 0) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-8 text-center">
+        <p className="text-muted font-medium mb-4">Geen foute woorden gevonden in deze set.</p>
+        <a
+          href={`/sets/${setId}/practice`}
+          className="px-4 py-2.5 bg-accent border-2 border-border-bold text-white rounded-xl font-bold shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all inline-block"
+        >
+          Terug naar instellingen
+        </a>
       </div>
     );
   }
@@ -176,7 +198,7 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
     case 'multiple-choice':
       return <MultipleChoiceMode {...commonProps} allPairs={pairs} />;
     case 'quick':
-      return <QuickMode pairs={pairs} config={config} set={set} />;
+      return <QuickMode pairs={filteredPairs} config={config} set={set} />;
     default:
       return <FlashcardMode {...commonProps} />;
   }

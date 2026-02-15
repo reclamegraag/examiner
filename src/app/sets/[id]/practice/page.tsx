@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, useMemo, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Button, Card } from '@/components/ui';
 import { useWordSet, useWordPairs } from '@/hooks';
-import { faPlay, faArrowLeft, faLayerGroup, faKeyboard, faList, faBolt } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faArrowLeft, faLayerGroup, faKeyboard, faList, faBolt, faRotate } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { PracticeMode } from '@/types';
 
@@ -27,11 +27,20 @@ export default function PracticeSetupPage({ params }: { params: Promise<{ id: st
 
   const [mode, setMode] = useState<PracticeMode>('flashcard');
   const [direction, setDirection] = useState<'a-to-b' | 'b-to-a' | 'random'>('a-to-b');
+  const [mistakesOnly, setMistakesOnly] = useState(false);
+
+  const mistakePairs = useMemo(
+    () => pairs.filter(p => p.incorrectCount > 0),
+    [pairs]
+  );
+
+  const activePairs = mistakesOnly ? mistakePairs : pairs;
 
   const handleStart = () => {
     const config = new URLSearchParams({
       mode,
       direction,
+      ...(mistakesOnly ? { filter: 'mistakes' } : {}),
     });
     router.push(`/sets/${setId}/practice/session?${config}`);
   };
@@ -59,7 +68,36 @@ export default function PracticeSetupPage({ params }: { params: Promise<{ id: st
         </Link>
 
         <h1 className="text-2xl md:text-3xl font-bold font-heading mb-2">{set.name}</h1>
-        <p className="text-muted mb-6 font-medium">{pairs.length} woorden om te oefenen</p>
+        <p className="text-muted mb-6 font-medium">{activePairs.length} woorden om te oefenen</p>
+
+        <Card className="mb-6">
+          <h3 className="text-xs font-bold text-muted mb-3 uppercase tracking-wide">Selectie</h3>
+          <button
+            onClick={() => setMistakesOnly(!mistakesOnly)}
+            className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+              mistakesOnly
+                ? 'border-warning bg-warning/10 shadow-brutal-sm'
+                : 'border-border hover:border-border-bold'
+            }`}
+          >
+            <div className={`p-2 rounded-lg border-2 ${mistakesOnly ? 'bg-warning border-border-bold text-white' : 'bg-background border-border'}`}>
+              <FontAwesomeIcon icon={faRotate} className="w-4 h-4" />
+            </div>
+            <div className="text-left flex-1">
+              <p className={`font-bold ${mistakesOnly ? 'text-foreground' : 'text-muted'}`}>
+                Alleen fouten
+              </p>
+              <p className="text-xs text-muted">
+                Oefen alleen woorden die eerder fout waren ({mistakePairs.length} woorden)
+              </p>
+            </div>
+          </button>
+          {mistakesOnly && mistakePairs.length === 0 && (
+            <p className="text-sm text-warning font-medium mt-2 px-1">
+              Je hebt nog geen fouten gemaakt. Oefen eerst de hele set!
+            </p>
+          )}
+        </Card>
 
         <Card className="mb-6">
           <h3 className="text-xs font-bold text-muted mb-3 uppercase tracking-wide">Kies een modus</h3>
@@ -128,7 +166,7 @@ export default function PracticeSetupPage({ params }: { params: Promise<{ id: st
           size="lg"
           className="w-full"
           onClick={handleStart}
-          disabled={pairs.length === 0}
+          disabled={activePairs.length === 0}
           icon={<FontAwesomeIcon icon={faPlay} />}
         >
           Start oefenen
