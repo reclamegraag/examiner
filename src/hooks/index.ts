@@ -1,4 +1,4 @@
-export { useWordSets, useWordSet, useWordPairs, useCreateWordSet, useUpdateWordSet, useDeleteWordSet, useAddWordPair, useUpdateWordPair, useDeleteWordPair, usePracticeSessions, useCreatePracticeSession } from './useDB';
+export { useWordSets, useWordSet, useWordPairs, useCreateWordSet, useUpdateWordSet, useDeleteWordSet, useAddWordPair, useUpdateWordPair, useDeleteWordPair, useAllPracticeSessions, usePracticeSessions, useCreatePracticeSession } from './useDB';
 export { usePracticeSession, useQuickMode } from './usePracticeSession';
 export { useOcr } from './useOcr';
 export { useSpeech } from './useSpeech';

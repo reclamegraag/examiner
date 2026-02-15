@@ -21,6 +21,7 @@ interface FlashcardModeProps {
   set: WordSet;
   languageA: string;
   languageB: string;
+  isRetryRound?: boolean;
 }
 
 export function FlashcardMode({
@@ -33,6 +34,7 @@ export function FlashcardMode({
   currentIndex,
   totalQuestions,
   set,
+  isRetryRound,
 }: FlashcardModeProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [startTime] = useState(Date.now());
@@ -66,11 +68,16 @@ export function FlashcardMode({
             <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5" />
           </Link>
           <span className="text-sm text-muted font-bold bg-card px-3 py-1 rounded-lg border-2 border-border">
+            {isRetryRound && <span className="text-warning mr-1">↻</span>}
             {currentIndex + 1} / {totalQuestions}
           </span>
         </div>
         <ProgressBar value={progress} size="sm" />
       </div>
+
+      {isRetryRound && (
+        <p className="text-center text-sm text-warning font-bold px-4">Herhaling van foute woorden</p>
+      )}
 
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-sm perspective-1000">

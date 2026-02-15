@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { WordPair, PracticeMode, ReviewedPair, PracticeConfig } from '@/types';
 import { calculateNextReview, getQualityFromCorrect } from '@/lib/spaced-repetition';
 
@@ -18,6 +18,7 @@ interface UsePracticeSessionReturn {
   isComplete: boolean;
   correctCount: number;
   incorrectCount: number;
+  isRetryRound: boolean;
   answer: (isCorrect: boolean, timeHint?: number) => void;
   next: () => void;
   reset: () => void;
@@ -28,6 +29,10 @@ export function usePracticeSession({ pairs, config }: UsePracticeSessionProps): 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [reviewedPairs, setReviewedPairs] = useState<ReviewedPair[]>([]);
   const [queue, setQueue] = useState<WordPair[]>(() => shuffleArray([...pairs]));
+  const [isRetryRound, setIsRetryRound] = useState(false);
+  const [firstRoundStats, setFirstRoundStats] = useState<{ correct: number; incorrect: number; total: number } | null>(null);
+  const incorrectInRound = useRef<Set<number>>(new Set());
+  const roundStats = useRef({ correct: 0, incorrect: 0 });
 
   useEffect(() => {
     if (pairs.length > 0 && queue.length === 0) {
@@ -55,26 +60,67 @@ export function usePracticeSession({ pairs, config }: UsePracticeSessionProps): 
     };
 
     setReviewedPairs(prev => [...prev, reviewed]);
+
+    if (isCorrect) {
+      roundStats.current.correct++;
+    } else {
+      roundStats.current.incorrect++;
+      incorrectInRound.current.add(currentPair.id!);
+    }
   }, [currentPair]);
 
   const next = useCallback(() => {
-    setCurrentIndex(prev => prev + 1);
-  }, []);
+    const nextIndex = currentIndex + 1;
+
+    if (nextIndex >= queue.length && incorrectInRound.current.size > 0) {
+      if (!isRetryRound) {
+        setFirstRoundStats({
+          correct: roundStats.current.correct,
+          incorrect: roundStats.current.incorrect,
+          total: roundStats.current.correct + roundStats.current.incorrect,
+        });
+      }
+
+      const retryPairs = pairs.filter(p => incorrectInRound.current.has(p.id!));
+      incorrectInRound.current = new Set();
+      roundStats.current = { correct: 0, incorrect: 0 };
+      setQueue(shuffleArray(retryPairs));
+      setCurrentIndex(0);
+      setIsRetryRound(true);
+      return;
+    }
+
+    setCurrentIndex(nextIndex);
+  }, [currentIndex, queue.length, pairs, isRetryRound]);
 
   const reset = useCallback(() => {
     setCurrentIndex(0);
     setReviewedPairs([]);
     setQueue(shuffleArray([...pairs]));
+    setIsRetryRound(false);
+    setFirstRoundStats(null);
+    incorrectInRound.current = new Set();
+    roundStats.current = { correct: 0, incorrect: 0 };
   }, [pairs]);
 
-  const getStats = useCallback(() => ({
-    correct: correctCount,
-    incorrect: incorrectCount,
-    total: reviewedPairs.length,
-    percentage: reviewedPairs.length > 0 
-      ? Math.round((correctCount / reviewedPairs.length) * 100) 
-      : 0,
-  }), [correctCount, incorrectCount, reviewedPairs.length]);
+  const getStats = useCallback(() => {
+    if (firstRoundStats) {
+      return {
+        ...firstRoundStats,
+        percentage: firstRoundStats.total > 0
+          ? Math.round((firstRoundStats.correct / firstRoundStats.total) * 100)
+          : 0,
+      };
+    }
+    return {
+      correct: correctCount,
+      incorrect: incorrectCount,
+      total: reviewedPairs.length,
+      percentage: reviewedPairs.length > 0
+        ? Math.round((correctCount / reviewedPairs.length) * 100)
+        : 0,
+    };
+  }, [correctCount, incorrectCount, reviewedPairs.length, firstRoundStats]);
 
   return {
     currentPair,
@@ -85,6 +131,7 @@ export function usePracticeSession({ pairs, config }: UsePracticeSessionProps): 
     isComplete,
     correctCount,
     incorrectCount,
+    isRetryRound,
     answer,
     next,
     reset,

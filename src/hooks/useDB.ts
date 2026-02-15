@@ -127,6 +127,14 @@ export function useDeleteWordPair() {
   return { deletePair };
 }
 
+export function useAllPracticeSessions() {
+  const sessions = useLiveQuery(() =>
+    db.practiceSessions.toArray()
+  );
+
+  return { sessions: sessions || [], isLoading: sessions === undefined };
+}
+
 export function usePracticeSessions(setId: number | undefined) {
   const sessions = useLiveQuery(() =>
     setId ? db.practiceSessions.where('setId').equals(setId).reverse().toArray() : [],

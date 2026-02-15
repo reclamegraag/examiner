@@ -22,6 +22,7 @@ interface MultipleChoiceModeProps {
   languageA: string;
   languageB: string;
   allPairs: WordPair[];
+  isRetryRound?: boolean;
 }
 
 export function MultipleChoiceMode({
@@ -35,6 +36,7 @@ export function MultipleChoiceMode({
   totalQuestions,
   set,
   allPairs,
+  isRetryRound,
 }: MultipleChoiceModeProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [startTime] = useState(Date.now());
@@ -85,6 +87,7 @@ export function MultipleChoiceMode({
             <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5" />
           </Link>
           <span className="text-sm text-muted font-bold bg-card px-3 py-1 rounded-lg border-2 border-border">
+            {isRetryRound && <span className="text-warning mr-1">↻</span>}
             {currentIndex + 1} / {totalQuestions}
           </span>
         </div>
@@ -93,6 +96,9 @@ export function MultipleChoiceMode({
 
       <div className="flex-1 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-sm">
+          {isRetryRound && (
+            <p className="text-center text-sm text-warning font-bold mb-4">Herhaling van foute woorden</p>
+          )}
           <div className="text-center mb-8">
             {isSupported && (
               <button
