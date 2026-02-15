@@ -40,6 +40,7 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
     isComplete,
     correctCount,
     incorrectCount,
+    isRetryRound,
     answer,
     next,
     reset,
@@ -102,22 +103,23 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
   if (isComplete) {
     handleComplete();
 
-    const scorePercent = totalQuestions > 0 ? correctCount / totalQuestions : 0;
+    const stats = getStats();
+    const scorePercent = stats.total > 0 ? stats.correct / stats.total : 0;
 
     return (
       <div className="max-w-lg mx-auto px-4 py-8 bg-background min-h-screen flex items-center">
         <div className="text-center w-full">
           <div className="bg-card border-2 border-border-bold rounded-3xl p-8 shadow-brutal inline-block mb-6">
             <CircularProgress
-              value={correctCount}
-              max={totalQuestions}
+              value={stats.correct}
+              max={stats.total}
               size={120}
               color={scorePercent >= 0.7 ? 'success' : scorePercent >= 0.5 ? 'warning' : 'error'}
             />
           </div>
           <h2 className="text-2xl font-bold mb-2">Klaar!</h2>
           <p className="text-muted mb-6 font-medium">
-            <span className="font-bold text-foreground">{correctCount}</span> van <span className="font-bold text-foreground">{totalQuestions}</span> goed ({Math.round(scorePercent * 100)}%)
+            <span className="font-bold text-foreground">{stats.correct}</span> van <span className="font-bold text-foreground">{stats.total}</span> goed ({stats.percentage}%)
           </p>
           <div className="flex gap-3 max-w-xs mx-auto">
             <button
@@ -154,6 +156,7 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
     set,
     languageA: set.languageA,
     languageB: set.languageB,
+    isRetryRound,
   };
 
   switch (mode) {
