@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button, ProgressBar } from '@/components/ui';
@@ -43,6 +43,24 @@ export function TypingMode({
   const [retypeCorrect, setRetypeCorrect] = useState(false);
   const [startTime] = useState(Date.now());
   const { speakText, isSupported } = useSpeech();
+  const onNextRef = useRef(onNext);
+  useEffect(() => { onNextRef.current = onNext; });
+
+  // Auto-advance to next word after correct answer
+  useEffect(() => {
+    if (feedback?.isCorrect) {
+      const timer = setTimeout(() => onNextRef.current(), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [feedback]);
+
+  // Auto-advance after correct retype
+  useEffect(() => {
+    if (retypeCorrect) {
+      const timer = setTimeout(() => onNextRef.current(), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [retypeCorrect]);
 
   useEffect(() => {
     setAnswer('');
