@@ -3,13 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { faChartLine, faFolderOpen, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faChartLine, faFolderOpen, faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: faChartLine },
   { href: '/sets', label: 'Sets', icon: faFolderOpen },
-  { href: '/sets/new', label: 'Nieuw', icon: faPlus },
+  { href: '/sets/generate', label: 'Genereer', icon: faWandMagicSparkles },
 ];
 
 export function BottomNav() {
