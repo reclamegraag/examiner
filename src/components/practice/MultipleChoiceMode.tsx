@@ -42,21 +42,36 @@ export function MultipleChoiceMode({
   const [startTime] = useState(Date.now());
   const { speakText, isSupported } = useSpeech();
 
+  // Compute options once per question (pair.id). Intentionally omitting allPairs and
+  // correctAnswer from deps: the component is remounted per question via key={questionKey},
+  // and allPairs can update reactively (Dexie) after onAnswer saves to the DB which would
+  // reshuffle the cards while feedback is still visible.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const options = useMemo(() => {
     const otherAnswers = allPairs
       .filter(p => p.id !== pair.id)
       .map(p => p.termB)
       .filter(a => a !== correctAnswer);
 
-    const shuffled = otherAnswers.sort(() => Math.random() - 0.5).slice(0, 3);
+    const shuffled = [...otherAnswers].sort(() => Math.random() - 0.5).slice(0, 3);
     const allOptions = [...shuffled, correctAnswer].sort(() => Math.random() - 0.5);
 
     return allOptions;
-  }, [pair.id, correctAnswer, allPairs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pair.id]);
 
   useEffect(() => {
     setSelected(null);
   }, [pair.id]);
+
+  // Auto-advance to the next question after 2.5 seconds
+  useEffect(() => {
+    if (selected === null) return;
+    const timer = setTimeout(() => {
+      onNext();
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [selected, onNext]);
 
   const handleSelect = (option: string) => {
     if (selected) return;
