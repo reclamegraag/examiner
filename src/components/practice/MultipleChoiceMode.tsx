@@ -109,12 +109,12 @@ export function MultipleChoiceMode({
         <ProgressBar value={progress} size="sm" />
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
+      <div className="flex-1 flex flex-col items-center justify-start pt-2 px-4 pb-4">
         <div className="w-full max-w-sm">
           {isRetryRound && (
-            <p className="text-center text-sm text-warning font-bold mb-4">Herhaling van foute woorden</p>
+            <p className="text-center text-sm text-warning font-bold mb-3">Herhaling van foute woorden</p>
           )}
-          <div className="text-center mb-8">
+          <div className="text-center mb-4">
             {isSupported && (
               <button
                 onClick={handleSpeak}
@@ -126,7 +126,7 @@ export function MultipleChoiceMode({
             <p className="text-2xl md:text-3xl font-bold">{question}</p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {options.map((option, index) => {
               const isSelected = selected === option;
               const isCorrectOption = option === correctAnswer;
@@ -147,7 +147,7 @@ export function MultipleChoiceMode({
                   key={index}
                   onClick={() => handleSelect(option)}
                   disabled={showFeedback}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition-all font-medium cursor-pointer ${styles} ${
+                  className={`w-full p-3 rounded-xl border-2 text-left transition-all font-medium cursor-pointer ${styles} ${
                     !showFeedback ? 'shadow-brutal-sm active:shadow-none active:translate-x-[2px] active:translate-y-[2px]' : ''
                   }`}
                   whileTap={{ scale: showFeedback ? 1 : 0.98 }}
@@ -167,7 +167,7 @@ export function MultipleChoiceMode({
       </div>
 
       <div
-        className={`p-4 pb-8 transition-opacity duration-300 ${showFeedback ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`p-3 pb-5 transition-opacity duration-300 ${showFeedback ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       >
         <Button
           size="lg"
