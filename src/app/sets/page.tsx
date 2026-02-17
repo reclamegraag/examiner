@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Card, Input, Modal } from '@/components/ui';
 import { SetCard, SetCardSkeleton } from '@/components/sets';
 import { useWordSets, useWordPairs, useDeleteWordSet } from '@/hooks';
-import { faPlus, faSearch, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faSearch, faTrash, faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const container = {
@@ -53,11 +53,18 @@ export default function SetsPage() {
           <p className="text-muted font-medium">{sets.length} sets</p>
         </div>
 
-        <Link href="/sets/new">
-          <Button icon={<FontAwesomeIcon icon={faPlus} />}>
-            Nieuwe set
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/sets/generate">
+            <Button variant="secondary" icon={<FontAwesomeIcon icon={faWandMagicSparkles} />}>
+              Genereer met AI
+            </Button>
+          </Link>
+          <Link href="/sets/new">
+            <Button icon={<FontAwesomeIcon icon={faPlus} />}>
+              Nieuwe set
+            </Button>
+          </Link>
+        </div>
       </motion.div>
 
       {sets.length > 0 && (
