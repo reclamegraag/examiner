@@ -19,6 +19,7 @@ interface UsePracticeSessionReturn {
   correctCount: number;
   incorrectCount: number;
   isRetryRound: boolean;
+  questionKey: number;
   answer: (isCorrect: boolean, timeHint?: number) => void;
   next: () => void;
   reset: () => void;
@@ -31,6 +32,7 @@ export function usePracticeSession({ pairs, config }: UsePracticeSessionProps): 
   const [queue, setQueue] = useState<WordPair[]>(() => shuffleArray([...pairs]));
   const [isRetryRound, setIsRetryRound] = useState(false);
   const [firstRoundStats, setFirstRoundStats] = useState<{ correct: number; incorrect: number; total: number } | null>(null);
+  const [questionKey, setQuestionKey] = useState(0);
   const incorrectInRound = useRef<Set<number>>(new Set());
   const roundStats = useRef({ correct: 0, incorrect: 0 });
 
@@ -87,10 +89,12 @@ export function usePracticeSession({ pairs, config }: UsePracticeSessionProps): 
       setQueue(shuffleArray(retryPairs));
       setCurrentIndex(0);
       setIsRetryRound(true);
+      setQuestionKey(prev => prev + 1);
       return;
     }
 
     setCurrentIndex(nextIndex);
+    setQuestionKey(prev => prev + 1);
   }, [currentIndex, queue.length, pairs, isRetryRound]);
 
   const reset = useCallback(() => {
@@ -99,6 +103,7 @@ export function usePracticeSession({ pairs, config }: UsePracticeSessionProps): 
     setQueue(shuffleArray([...pairs]));
     setIsRetryRound(false);
     setFirstRoundStats(null);
+    setQuestionKey(0);
     incorrectInRound.current = new Set();
     roundStats.current = { correct: 0, incorrect: 0 };
   }, [pairs]);
@@ -132,6 +137,7 @@ export function usePracticeSession({ pairs, config }: UsePracticeSessionProps): 
     correctCount,
     incorrectCount,
     isRetryRound,
+    questionKey,
     answer,
     next,
     reset,

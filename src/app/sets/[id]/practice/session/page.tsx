@@ -49,6 +49,7 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
     correctCount,
     incorrectCount,
     isRetryRound,
+    questionKey,
     answer,
     next,
     reset,
@@ -204,14 +205,14 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
 
   switch (mode) {
     case 'flashcard':
-      return <FlashcardMode {...commonProps} />;
+      return <FlashcardMode key={questionKey} {...commonProps} />;
     case 'typing':
-      return <TypingMode {...commonProps} />;
+      return <TypingMode key={questionKey} {...commonProps} />;
     case 'multiple-choice':
-      return <MultipleChoiceMode {...commonProps} allPairs={pairs} />;
+      return <MultipleChoiceMode key={questionKey} {...commonProps} allPairs={pairs} />;
     case 'quick':
       return <QuickMode pairs={filteredPairs} config={config} set={set} />;
     default:
-      return <FlashcardMode {...commonProps} />;
+      return <FlashcardMode key={questionKey} {...commonProps} />;
   }
 }
