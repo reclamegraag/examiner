@@ -166,21 +166,17 @@ export function MultipleChoiceMode({
         </div>
       </div>
 
-      {showFeedback && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 pb-8"
+      <div
+        className={`p-4 pb-8 transition-opacity duration-300 ${showFeedback ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+      >
+        <Button
+          size="lg"
+          className="w-full max-w-sm mx-auto"
+          onClick={handleNext}
         >
-          <Button
-            size="lg"
-            className="w-full max-w-sm mx-auto"
-            onClick={handleNext}
-          >
-            {isCorrect ? 'Volgende' : 'Doorgaan'}
-          </Button>
-        </motion.div>
-      )}
+          {isCorrect ? 'Volgende' : 'Doorgaan'}
+        </Button>
+      </div>
     </div>
   );
 }
