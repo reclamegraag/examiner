@@ -137,7 +137,7 @@ export function TypingMode({
             <p className="text-2xl md:text-3xl font-bold">{question}</p>
           </div>
 
-          <div className={`text-center mb-3 ${!feedback ? 'invisible' : ''}`}>
+          <div className={`text-center mb-3 min-h-33 ${!feedback ? 'invisible' : ''}`}>
             {feedback ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
