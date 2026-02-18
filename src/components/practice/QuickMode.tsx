@@ -93,7 +93,7 @@ export function QuickMode({ pairs, config, set }: QuickModeProps) {
 
   if (isComplete) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
+      <div className="flex flex-col items-center justify-center px-4 pt-8">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -134,26 +134,24 @@ export function QuickMode({ pairs, config, set }: QuickModeProps) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <Link href={`/sets/${set.id}`} className="p-2 text-muted hover:text-foreground transition-colors">
-            <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5" />
-          </Link>
-          <span className="text-sm text-muted font-bold bg-card px-3 py-1 rounded-lg border-2 border-border">
-            {completed.size} / {pairs.length} onder de knie
-          </span>
-        </div>
-        <ProgressBar value={progress} color="success" size="sm" />
+    <div className="px-4 pt-3">
+      <div className="flex items-center justify-between mb-1">
+        <Link href={`/sets/${set.id}`} className="p-2 text-muted hover:text-foreground transition-colors">
+          <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5" />
+        </Link>
+        <span className="text-sm text-muted font-bold bg-card px-3 py-1 rounded-lg border-2 border-border">
+          {completed.size} / {pairs.length} onder de knie
+        </span>
       </div>
+      <ProgressBar value={progress} color="success" size="sm" />
 
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
+      <div className="flex flex-col items-center pt-4">
         <div className="w-full max-w-sm">
-          <div className="text-center mb-8">
+          <div className="text-center mb-4">
             {isSupported && (
               <button
                 onClick={handleSpeak}
-                className="mb-4 p-2 text-muted hover:text-accent transition-colors"
+                className="mb-2 p-2 text-muted hover:text-accent transition-colors"
               >
                 <FontAwesomeIcon icon={faVolumeHigh} className="w-5 h-5" />
               </button>
@@ -166,6 +164,12 @@ export function QuickMode({ pairs, config, set }: QuickModeProps) {
             </p>
           </div>
 
+          <div className={`mb-3 ${!showAnswer ? 'invisible' : ''}`}>
+            <div className="bg-accent-light border-2 border-accent rounded-2xl p-4 shadow-brutal-sm">
+              <p className="text-2xl font-bold text-accent">{showAnswer ? correctAnswer : '\u00A0'}</p>
+            </div>
+          </div>
+
           {!showAnswer ? (
             <Button
               size="lg"
@@ -176,45 +180,32 @@ export function QuickMode({ pairs, config, set }: QuickModeProps) {
             </Button>
           ) : (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center mb-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
             >
-              <div className="bg-accent-light border-2 border-accent rounded-2xl p-4 shadow-brutal-sm">
-                <p className="text-2xl font-bold text-accent">{correctAnswer}</p>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="danger"
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => handleAnswer(false)}
+                  icon={<FontAwesomeIcon icon={faXmark} />}
+                >
+                  Nog niet
+                </Button>
+                <Button
+                  size="lg"
+                  className="flex-1 !bg-success !border-border-bold hover:!bg-success/90"
+                  onClick={() => handleAnswer(true)}
+                  icon={<FontAwesomeIcon icon={faCheck} />}
+                >
+                  Goed
+                </Button>
               </div>
             </motion.div>
           )}
         </div>
       </div>
-
-      {showAnswer && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 pb-8"
-        >
-          <div className="flex flex-wrap gap-3 max-w-sm mx-auto">
-            <Button
-              variant="danger"
-              size="lg"
-              className="flex-1"
-              onClick={() => handleAnswer(false)}
-              icon={<FontAwesomeIcon icon={faXmark} />}
-            >
-              Nog niet
-            </Button>
-            <Button
-              size="lg"
-              className="flex-1 !bg-success !border-border-bold hover:!bg-success/90"
-              onClick={() => handleAnswer(true)}
-              icon={<FontAwesomeIcon icon={faCheck} />}
-            >
-              Goed
-            </Button>
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 }

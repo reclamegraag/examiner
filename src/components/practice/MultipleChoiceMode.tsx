@@ -64,7 +64,6 @@ export function MultipleChoiceMode({
     setSelected(null);
   }, [pair.id]);
 
-  // Auto-advance to the next question after 2.5 seconds
   useEffect(() => {
     if (selected === null) return;
     const timer = setTimeout(() => {
@@ -95,30 +94,28 @@ export function MultipleChoiceMode({
   const showFeedback = selected !== null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <Link href={`/sets/${set.id}`} className="p-2 text-muted hover:text-foreground transition-colors">
-            <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5" />
-          </Link>
-          <span className="text-sm text-muted font-bold bg-card px-3 py-1 rounded-lg border-2 border-border">
-            {isRetryRound && <span className="text-warning mr-1">↻</span>}
-            {currentIndex + 1} / {totalQuestions}
-          </span>
-        </div>
-        <ProgressBar value={progress} size="sm" />
+    <div className="px-4 pt-3">
+      <div className="flex items-center justify-between mb-1">
+        <Link href={`/sets/${set.id}`} className="p-2 text-muted hover:text-foreground transition-colors">
+          <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5" />
+        </Link>
+        <span className="text-sm text-muted font-bold bg-card px-3 py-1 rounded-lg border-2 border-border">
+          {isRetryRound && <span className="text-warning mr-1">↻</span>}
+          {currentIndex + 1} / {totalQuestions}
+        </span>
       </div>
+      <ProgressBar value={progress} size="sm" />
 
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
+      <div className="flex flex-col items-center pt-4">
         <div className="w-full max-w-sm">
           {isRetryRound && (
-            <p className="text-center text-sm text-warning font-bold mb-4">Herhaling van foute woorden</p>
+            <p className="text-center text-sm text-warning font-bold mb-2">Herhaling van foute woorden</p>
           )}
-          <div className="text-center mb-8">
+          <div className="text-center mb-3">
             {isSupported && (
               <button
                 onClick={handleSpeak}
-                className="mb-4 p-2 text-muted hover:text-accent transition-colors"
+                className="mb-1 p-2 text-muted hover:text-accent transition-colors"
               >
                 <FontAwesomeIcon icon={faVolumeHigh} className="w-5 h-5" />
               </button>
@@ -126,7 +123,7 @@ export function MultipleChoiceMode({
             <p className="text-2xl md:text-3xl font-bold">{question}</p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {options.map((option, index) => {
               const isSelected = selected === option;
               const isCorrectOption = option === correctAnswer;
@@ -147,12 +144,12 @@ export function MultipleChoiceMode({
                   key={index}
                   onClick={() => handleSelect(option)}
                   disabled={showFeedback}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition-all font-medium cursor-pointer ${styles} ${
+                  className={`w-full p-3 rounded-xl border-2 text-left transition-all font-medium cursor-pointer ${styles} ${
                     !showFeedback ? 'shadow-brutal-sm active:shadow-none active:translate-x-[2px] active:translate-y-[2px]' : ''
                   }`}
                   whileTap={{ scale: showFeedback ? 1 : 0.98 }}
                 >
-                  <span className="text-lg">{option}</span>
+                  <span className="text-base">{option}</span>
                   {showFeedback && isCorrectOption && (
                     <FontAwesomeIcon icon={faCheck} className="w-4 h-4 ml-2" />
                   )}
@@ -163,19 +160,17 @@ export function MultipleChoiceMode({
               );
             })}
           </div>
-        </div>
-      </div>
 
-      <div
-        className={`p-4 pb-8 transition-opacity duration-300 ${showFeedback ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-      >
-        <Button
-          size="lg"
-          className="w-full max-w-sm mx-auto"
-          onClick={handleNext}
-        >
-          {isCorrect ? 'Volgende' : 'Doorgaan'}
-        </Button>
+          <div className={`mt-3 ${!showFeedback ? 'invisible' : ''}`}>
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={handleNext}
+            >
+              {isCorrect ? 'Volgende' : 'Doorgaan'}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

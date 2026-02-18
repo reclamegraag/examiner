@@ -105,37 +105,64 @@ export function TypingMode({
   };
 
   const isCorrect = feedback?.isCorrect;
+  const showFooter = feedback && (feedback.isCorrect || retypeCorrect);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <Link href={`/sets/${set.id}`} className="p-2 text-muted hover:text-foreground transition-colors">
-            <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5" />
-          </Link>
-          <span className="text-sm text-muted font-bold bg-card px-3 py-1 rounded-lg border-2 border-border">
-            {isRetryRound && <span className="text-warning mr-1">↻</span>}
-            {currentIndex + 1} / {totalQuestions}
-          </span>
-        </div>
-        <ProgressBar value={progress} size="sm" />
+    <div className="px-4 pt-3">
+      <div className="flex items-center justify-between mb-1">
+        <Link href={`/sets/${set.id}`} className="p-2 text-muted hover:text-foreground transition-colors">
+          <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5" />
+        </Link>
+        <span className="text-sm text-muted font-bold bg-card px-3 py-1 rounded-lg border-2 border-border">
+          {isRetryRound && <span className="text-warning mr-1">↻</span>}
+          {currentIndex + 1} / {totalQuestions}
+        </span>
       </div>
+      <ProgressBar value={progress} size="sm" />
 
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
+      <div className="flex flex-col items-center pt-4">
         <div className="w-full max-w-sm">
           {isRetryRound && (
-            <p className="text-center text-sm text-warning font-bold mb-4">Herhaling van foute woorden</p>
+            <p className="text-center text-sm text-warning font-bold mb-2">Herhaling van foute woorden</p>
           )}
-          <div className="text-center mb-8">
+          <div className="text-center mb-4">
             {isSupported && (
               <button
                 onClick={handleSpeak}
-                className="mb-4 p-2 text-muted hover:text-accent transition-colors"
+                className="mb-2 p-2 text-muted hover:text-accent transition-colors"
               >
                 <FontAwesomeIcon icon={faVolumeHigh} className="w-5 h-5" />
               </button>
             )}
             <p className="text-2xl md:text-3xl font-bold">{question}</p>
+          </div>
+
+          <div className={`text-center mb-3 ${!feedback ? 'invisible' : ''}`}>
+            {feedback ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-2 border-2 ${
+                  isCorrect ? 'bg-success-light text-success border-success' : 'bg-error-light text-error border-error'
+                }`}>
+                  <FontAwesomeIcon icon={isCorrect ? faCheck : faXmark} className="w-7 h-7" />
+                </div>
+                {feedback.message && (
+                  <p className={`text-lg font-bold ${isCorrect ? 'text-success' : 'text-error'}`}>
+                    {feedback.message}
+                  </p>
+                )}
+                {!isCorrect && !retypeCorrect && (
+                  <p className="text-sm text-muted mt-2 font-medium">Typ het juiste antwoord over</p>
+                )}
+                {!isCorrect && retypeCorrect && (
+                  <p className="text-success font-bold mt-2">Goed zo!</p>
+                )}
+              </motion.div>
+            ) : (
+              <div className="w-14 h-14 mb-2" />
+            )}
           </div>
 
           {!feedback ? (
@@ -150,79 +177,53 @@ export function TypingMode({
               />
               <Button
                 type="submit"
-                className="w-full mt-4"
+                size="lg"
+                className="w-full mt-3"
                 disabled={!answer.trim()}
                 icon={<FontAwesomeIcon icon={faArrowRight} />}
               >
                 Controleren
               </Button>
             </form>
+          ) : !isCorrect && !retypeCorrect ? (
+            <form onSubmit={handleRetypeSubmit}>
+              <input
+                type="text"
+                value={retypeValue}
+                onChange={e => setRetypeValue(e.target.value)}
+                placeholder="Typ het juiste antwoord..."
+                className="w-full bg-card border-2 border-border-bold rounded-xl px-4 py-3 text-center text-lg font-medium focus:outline-none focus:border-accent shadow-brutal-sm"
+                autoFocus
+              />
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full mt-3"
+                disabled={!retypeValue.trim()}
+                icon={<FontAwesomeIcon icon={faCheck} />}
+              >
+                Controleren
+              </Button>
+            </form>
           ) : (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center"
-            >
-              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 border-2 ${
-                isCorrect ? 'bg-success-light text-success border-success' : 'bg-error-light text-error border-error'
-              }`}>
-                <FontAwesomeIcon icon={isCorrect ? faCheck : faXmark} className="w-8 h-8" />
-              </div>
-              {feedback.message && (
-                <p className={`text-lg font-bold ${isCorrect ? 'text-success' : 'text-error'}`}>
-                  {feedback.message}
-                </p>
-              )}
-              {!isCorrect && !retypeCorrect && (
-                <form onSubmit={handleRetypeSubmit} className="mt-6">
-                  <p className="text-sm text-muted mb-2 font-medium">Typ het juiste antwoord over</p>
-                  <input
-                    type="text"
-                    value={retypeValue}
-                    onChange={e => setRetypeValue(e.target.value)}
-                    className="w-full bg-card border-2 border-border-bold rounded-xl px-4 py-3 text-center text-lg font-medium focus:outline-none focus:border-accent shadow-brutal-sm"
-                    autoFocus
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full mt-3"
-                    disabled={!retypeValue.trim()}
-                    icon={<FontAwesomeIcon icon={faCheck} />}
-                  >
-                    Controleren
-                  </Button>
-                </form>
-              )}
-              {!isCorrect && retypeCorrect && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-4"
-                >
-                  <p className="text-success font-bold">Goed zo!</p>
-                </motion.div>
-              )}
-            </motion.div>
+            <div>
+              <input
+                className="w-full bg-card border-2 border-border-bold rounded-xl px-4 py-3 text-center text-lg font-medium invisible"
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+              <Button
+                size="lg"
+                className="w-full mt-3"
+                onClick={handleNext}
+                icon={<FontAwesomeIcon icon={faArrowRight} />}
+              >
+                Volgende
+              </Button>
+            </div>
           )}
         </div>
       </div>
-
-      {feedback && (feedback.isCorrect || retypeCorrect) && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 pb-8"
-        >
-          <Button
-            size="lg"
-            className="w-full max-w-sm mx-auto"
-            onClick={handleNext}
-            icon={<FontAwesomeIcon icon={faArrowRight} />}
-          >
-            Volgende
-          </Button>
-        </motion.div>
-      )}
     </div>
   );
 }
