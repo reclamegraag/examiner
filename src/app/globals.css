@@ -48,12 +48,14 @@ html {
   font-family: var(--font-sans);
   background: var(--background);
   color: var(--foreground);
+  overflow-x: hidden;
 }
 
 body {
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
+  overflow-x: hidden;
   background: var(--background);
   background-image: radial-gradient(circle, #d4cbc030 1px, transparent 1px);
   background-size: 28px 28px;
