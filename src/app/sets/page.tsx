@@ -84,7 +84,7 @@ export default function SetsPage() {
       )}
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
           <SetCardSkeleton count={4} />
         </div>
       ) : filteredSets.length === 0 ? (
@@ -119,7 +119,7 @@ export default function SetsPage() {
           variants={container}
           initial="hidden"
           animate="show"
-          className="grid gap-4 md:grid-cols-2"
+          className="grid gap-4 grid-cols-1 md:grid-cols-2"
         >
           <AnimatePresence>
             {filteredSets.map(set => (
