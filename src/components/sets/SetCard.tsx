@@ -23,7 +23,7 @@ export function SetCard({ set, pairCount, recentScore }: SetCardProps) {
         <Card hoverable className="group">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-foreground truncate group-hover:text-accent transition-colors">
+              <h3 className="text-lg font-bold text-foreground line-clamp-2 group-hover:text-accent transition-colors">
                 {set.name}
               </h3>
               <div className="flex items-center gap-2 mt-2 text-sm text-muted font-medium">

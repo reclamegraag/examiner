@@ -83,17 +83,17 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
           Terug naar sets
         </Link>
 
-        <div className="flex items-start justify-between mb-6">
-          <div>
+        <div className="flex items-start justify-between gap-3 mb-6">
+          <div className="min-w-0">
             {isEditing ? (
               <input
                 value={editName}
                 onChange={e => setEditName(e.target.value)}
-                className="text-2xl md:text-3xl font-bold font-heading bg-transparent border-b-2 border-accent focus:outline-none"
+                className="text-2xl md:text-3xl font-bold font-heading bg-transparent border-b-2 border-accent focus:outline-none w-full"
                 autoFocus
               />
             ) : (
-              <h1 className="text-2xl md:text-3xl font-bold font-heading">{set.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold font-heading break-words">{set.name}</h1>
             )}
             <p className="text-muted mt-1 font-medium">
               <span className="bg-background px-2 py-0.5 rounded-md border-2 border-border text-xs font-bold uppercase">

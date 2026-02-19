@@ -75,7 +75,7 @@ export default function PracticeSetupPage({ params }: { params: Promise<{ id: st
           Terug
         </Link>
 
-        <h1 className="text-2xl md:text-3xl font-bold font-heading mb-2">{set.name}</h1>
+        <h1 className="text-2xl md:text-3xl font-bold font-heading mb-2 break-words">{set.name}</h1>
         <p className="text-muted mb-6 font-medium">{activePairs.length} woorden om te oefenen</p>
 
         <Card className="mb-6">
