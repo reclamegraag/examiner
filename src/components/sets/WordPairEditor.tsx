@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Input } from '@/components/ui';
-import { faPlus, faTrash, faGripLines } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faTrash, faGripLines, faPen } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { WordPair } from '@/types';
 
@@ -109,7 +109,7 @@ export function WordPairRow({ pair, onEdit, onDelete }: WordPairRowProps) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex items-center justify-between p-3 bg-card rounded-xl border-2 border-border hover:border-border-bold transition-colors"
+      className="group flex items-center justify-between p-3 bg-card rounded-xl border-2 border-border hover:border-border-bold transition-colors"
     >
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <span className="text-foreground font-medium truncate">{pair.termA}</span>
@@ -125,6 +125,29 @@ export function WordPairRow({ pair, onEdit, onDelete }: WordPairRowProps) {
         }`}>
           {pair.correctCount}/{pair.correctCount + pair.incorrectCount}
         </span>
+
+        {(onEdit || onDelete) && (
+          <div className="flex items-center gap-0.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="p-1.5 text-muted hover:text-accent rounded-lg hover:bg-accent-light transition-colors"
+                aria-label="Woordpaar bewerken"
+              >
+                <FontAwesomeIcon icon={faPen} className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                className="p-1.5 text-muted hover:text-error rounded-lg hover:bg-error-light transition-colors"
+                aria-label="Woordpaar verwijderen"
+              >
+                <FontAwesomeIcon icon={faTrash} className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );

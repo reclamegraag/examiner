@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Button, Card, Modal, ProgressBar } from '@/components/ui';
 import { WordPairEditor, WordPairRow } from '@/components/sets';
-import { useWordSet, useWordPairs, useUpdateWordSet, useDeleteWordSet, useAddWordPair, useDeleteWordPair } from '@/hooks';
+import { useWordSet, useWordPairs, useUpdateWordSet, useDeleteWordSet, useAddWordPair, useDeleteWordPair, useUpdateWordPair } from '@/hooks';
+import type { WordPair } from '@/types';
 import { faPlay, faEdit, faTrash, faPlus, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
@@ -21,12 +22,17 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
   const { deleteSet } = useDeleteWordSet();
   const { add } = useAddWordPair();
   const { deletePair } = useDeleteWordPair();
+  const { update: updatePair } = useUpdateWordPair();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [deleteModal, setDeleteModal] = useState(false);
   const [addModal, setAddModal] = useState(false);
   const [newPair, setNewPair] = useState({ termA: '', termB: '' });
+  const [editPairModal, setEditPairModal] = useState(false);
+  const [deletePairModal, setDeletePairModal] = useState(false);
+  const [selectedPair, setSelectedPair] = useState<WordPair | null>(null);
+  const [editPairValues, setEditPairValues] = useState({ termA: '', termB: '' });
 
   const handleStartEdit = () => {
     if (set) {
@@ -52,6 +58,33 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
       await add(setId, newPair.termA, newPair.termB);
       setNewPair({ termA: '', termB: '' });
       setAddModal(false);
+    }
+  };
+
+  const handleEditPairOpen = (pair: WordPair) => {
+    setSelectedPair(pair);
+    setEditPairValues({ termA: pair.termA, termB: pair.termB });
+    setEditPairModal(true);
+  };
+
+  const handleSaveEditPair = async () => {
+    if (selectedPair && editPairValues.termA.trim() && editPairValues.termB.trim()) {
+      await updatePair(selectedPair.id!, { termA: editPairValues.termA.trim(), termB: editPairValues.termB.trim() });
+      setEditPairModal(false);
+      setSelectedPair(null);
+    }
+  };
+
+  const handleDeletePairOpen = (pair: WordPair) => {
+    setSelectedPair(pair);
+    setDeletePairModal(true);
+  };
+
+  const handleDeletePairConfirm = async () => {
+    if (selectedPair) {
+      await deletePair(selectedPair.id!);
+      setDeletePairModal(false);
+      setSelectedPair(null);
     }
   };
 
@@ -161,7 +194,12 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
 
         <div className="space-y-2">
           {pairs.map(pair => (
-            <WordPairRow key={pair.id} pair={pair} />
+            <WordPairRow
+              key={pair.id}
+              pair={pair}
+              onEdit={() => handleEditPairOpen(pair)}
+              onDelete={() => handleDeletePairOpen(pair)}
+            />
           ))}
         </div>
 
@@ -217,6 +255,50 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
             disabled={!newPair.termA.trim() || !newPair.termB.trim()}
           >
             Toevoegen
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={editPairModal} onClose={() => { setEditPairModal(false); setSelectedPair(null); }} title="Woordpaar bewerken">
+        <div className="space-y-4">
+          <input
+            value={editPairValues.termA}
+            onChange={e => setEditPairValues(v => ({ ...v, termA: e.target.value }))}
+            placeholder={set.languageA.toUpperCase()}
+            autoFocus
+            className="w-full bg-card border-2 border-border-bold rounded-xl px-4 py-2.5 focus:outline-none focus:border-accent"
+          />
+          <input
+            value={editPairValues.termB}
+            onChange={e => setEditPairValues(v => ({ ...v, termB: e.target.value }))}
+            placeholder={set.languageB.toUpperCase()}
+            className="w-full bg-card border-2 border-border-bold rounded-xl px-4 py-2.5 focus:outline-none focus:border-accent"
+          />
+        </div>
+        <div className="flex gap-3 mt-6">
+          <Button variant="secondary" className="flex-1" onClick={() => { setEditPairModal(false); setSelectedPair(null); }}>
+            Annuleren
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={handleSaveEditPair}
+            disabled={!editPairValues.termA.trim() || !editPairValues.termB.trim()}
+          >
+            Opslaan
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={deletePairModal} onClose={() => { setDeletePairModal(false); setSelectedPair(null); }} title="Woordpaar verwijderen?" size="sm">
+        <p className="text-muted mb-6 font-medium">
+          Weet je zeker dat je <span className="font-bold text-foreground">&quot;{selectedPair?.termA} → {selectedPair?.termB}&quot;</span> wilt verwijderen?
+        </p>
+        <div className="flex gap-3">
+          <Button variant="secondary" className="flex-1" onClick={() => { setDeletePairModal(false); setSelectedPair(null); }}>
+            Annuleren
+          </Button>
+          <Button variant="danger" className="flex-1" onClick={handleDeletePairConfirm}>
+            Verwijderen
           </Button>
         </div>
       </Modal>
