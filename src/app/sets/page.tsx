@@ -5,9 +5,12 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Card, Input, Modal } from '@/components/ui';
 import { SetCard, SetCardSkeleton } from '@/components/sets';
-import { useWordSets, useWordPairs, useDeleteWordSet } from '@/hooks';
-import { faPlus, faSearch, faTrash, faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons';
+import { useWordSets, useWordPairs, useDeleteWordSet, useCreateWordSet } from '@/hooks';
+import { faPlus, faSearch, faTrash, faWandMagicSparkles, faLink } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { useRouter } from 'next/navigation';
+import { decodeShareData } from '@/lib/share';
+import { getLanguageByCode } from '@/lib/languages';
 
 const container = {
   hidden: { opacity: 0 },
@@ -25,14 +28,43 @@ const item = {
 export default function SetsPage() {
   const { sets, isLoading } = useWordSets();
   const { deleteSet } = useDeleteWordSet();
+  const { create } = useCreateWordSet();
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; id: number | null }>({ open: false, id: null });
+  const [importModal, setImportModal] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
+  const [importError, setImportError] = useState('');
+  const [importing, setImporting] = useState(false);
 
   const filteredSets = sets.filter(set =>
     set.name.toLowerCase().includes(search.toLowerCase()) ||
     set.languageA.toLowerCase().includes(search.toLowerCase()) ||
     set.languageB.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleImport = async () => {
+    setImportError('');
+    const match = importUrl.match(/[?&]d=([^&]+)/);
+    if (!match) {
+      setImportError('Geen geldige deellink. Plak de volledige URL.');
+      return;
+    }
+    const payload = decodeShareData(match[1]);
+    if (!payload) {
+      setImportError('De link is ongeldig of beschadigd.');
+      return;
+    }
+    setImporting(true);
+    try {
+      const pairs = payload.p.map(([termA, termB]) => ({ termA, termB }));
+      const newId = await create(payload.n, payload.a, payload.b, pairs);
+      router.push(`/sets/${newId}`);
+    } catch {
+      setImportError('Er ging iets mis bij het importeren.');
+      setImporting(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (deleteModal.id) {
@@ -54,6 +86,9 @@ export default function SetsPage() {
         </div>
 
         <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setImportModal(true)} icon={<FontAwesomeIcon icon={faLink} />}>
+            Importeer
+          </Button>
           <Link href="/sets/generate">
             <Button variant="secondary" icon={<FontAwesomeIcon icon={faWandMagicSparkles} />}>
               Genereer met AI
@@ -168,6 +203,43 @@ export default function SetsPage() {
             onClick={handleDelete}
           >
             Verwijderen
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={importModal}
+        onClose={() => { setImportModal(false); setImportUrl(''); setImportError(''); }}
+        title="Set importeren"
+        size="sm"
+      >
+        <p className="text-muted mb-4 font-medium text-sm">
+          Plak hier de deellink die je hebt ontvangen.
+        </p>
+        <input
+          value={importUrl}
+          onChange={e => { setImportUrl(e.target.value); setImportError(''); }}
+          placeholder="https://...?d=..."
+          className="w-full bg-card border-2 border-border-bold rounded-xl px-4 py-2.5 focus:outline-none focus:border-accent text-sm"
+          autoFocus
+        />
+        {importError && (
+          <p className="text-error text-sm font-medium mt-2">{importError}</p>
+        )}
+        <div className="flex gap-3 mt-6">
+          <Button
+            variant="secondary"
+            className="flex-1"
+            onClick={() => { setImportModal(false); setImportUrl(''); setImportError(''); }}
+          >
+            Annuleren
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={handleImport}
+            disabled={!importUrl.trim() || importing}
+          >
+            {importing ? 'Importeren...' : 'Importeren'}
           </Button>
         </div>
       </Modal>
