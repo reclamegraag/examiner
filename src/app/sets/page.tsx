@@ -85,16 +85,16 @@ export default function SetsPage() {
           <p className="text-muted font-medium">{sets.length} sets</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-stretch">
           <Button variant="secondary" onClick={() => setImportModal(true)} icon={<FontAwesomeIcon icon={faLink} />}>
-            Importeer
+            <span className="hidden md:inline">Importeer</span>
           </Button>
-          <Link href="/sets/generate">
+          <Link href="/sets/generate" className="flex">
             <Button variant="secondary" icon={<FontAwesomeIcon icon={faWandMagicSparkles} />}>
-              Genereer met AI
+              <span className="hidden md:inline">Genereer met AI</span>
             </Button>
           </Link>
-          <Link href="/sets/new">
+          <Link href="/sets/new" className="flex">
             <Button icon={<FontAwesomeIcon icon={faPlus} />}>
               Nieuwe set
             </Button>
