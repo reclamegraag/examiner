@@ -135,7 +135,7 @@ export default function SetsPage() {
                     e.preventDefault();
                     setDeleteModal({ open: true, id: set.id! });
                   }}
-                  className="absolute top-5 right-5 p-2 rounded-lg bg-error-light text-error border-2 border-error opacity-0 group-hover:opacity-100 transition-opacity shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+                  className="absolute top-5 right-16 z-10 p-2 rounded-lg bg-error-light text-error border-2 border-error opacity-0 group-hover:opacity-100 transition-opacity shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer"
                 >
                   <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
                 </button>

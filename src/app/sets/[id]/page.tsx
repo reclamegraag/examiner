@@ -8,7 +8,9 @@ import { Button, Card, Modal, ProgressBar } from '@/components/ui';
 import { WordPairEditor, WordPairRow } from '@/components/sets';
 import { useWordSet, useWordPairs, useUpdateWordSet, useDeleteWordSet, useAddWordPair, useDeleteWordPair, useUpdateWordPair } from '@/hooks';
 import type { WordPair } from '@/types';
-import { faPlay, faEdit, faTrash, faPlus, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faEdit, faTrash, faPlus, faArrowLeft, faShareNodes, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { buildShareUrl } from '@/lib/share';
+import type { SharePayload } from '@/lib/share';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 export default function SetDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -33,6 +35,7 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
   const [deletePairModal, setDeletePairModal] = useState(false);
   const [selectedPair, setSelectedPair] = useState<WordPair | null>(null);
   const [editPairValues, setEditPairValues] = useState({ termA: '', termB: '' });
+  const [shareCopied, setShareCopied] = useState(false);
 
   const handleStartEdit = () => {
     if (set) {
@@ -78,6 +81,20 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
   const handleDeletePairOpen = (pair: WordPair) => {
     setSelectedPair(pair);
     setDeletePairModal(true);
+  };
+
+  const handleShare = async () => {
+    if (!set) return;
+    const payload: SharePayload = {
+      n: set.name,
+      a: set.languageA,
+      b: set.languageB,
+      p: pairs.map(pair => [pair.termA, pair.termB]),
+    };
+    const url = buildShareUrl(window.location.origin, payload);
+    await navigator.clipboard.writeText(url);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
   };
 
   const handleDeletePairConfirm = async () => {
@@ -184,6 +201,12 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
               Start oefenen
             </Button>
           </Link>
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={handleShare}
+            icon={<FontAwesomeIcon icon={shareCopied ? faCheck : faShareNodes} />}
+          />
           <Button
             variant="secondary"
             size="lg"
