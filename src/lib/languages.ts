@@ -8,6 +8,7 @@ export const languages: Language[] = [
   { code: 'es', name: 'Spaans', tesseractCode: 'spa', speechCode: 'es-ES' },
   { code: 'it', name: 'Italiaans', tesseractCode: 'ita', speechCode: 'it-IT' },
   { code: 'pt', name: 'Portugees', tesseractCode: 'por', speechCode: 'pt-PT' },
+  { code: 'el', name: 'Grieks', tesseractCode: 'ell', speechCode: 'el-GR' },
   { code: 'la', name: 'Latijn', tesseractCode: 'lat', speechCode: 'la' },
 ];
 
