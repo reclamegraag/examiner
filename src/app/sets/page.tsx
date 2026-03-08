@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Card, Input, Modal } from '@/components/ui';
 import { SetCard, SetCardSkeleton } from '@/components/sets';
 import { useWordSets, useWordPairs, useDeleteWordSet, useCreateWordSet } from '@/hooks';
-import { faPlus, faSearch, faTrash, faWandMagicSparkles, faLink } from '@fortawesome/free-solid-svg-icons';
+import { useMergeSets } from '@/hooks/useMergeSets';
+import { faPlus, faSearch, faTrash, faWandMagicSparkles, faLink, faObjectGroup, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useRouter } from 'next/navigation';
 import { decodeShareData } from '@/lib/share';
@@ -29,6 +30,7 @@ export default function SetsPage() {
   const { sets, isLoading } = useWordSets();
   const { deleteSet } = useDeleteWordSet();
   const { create } = useCreateWordSet();
+  const { merge } = useMergeSets();
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; id: number | null }>({ open: false, id: null });
@@ -36,6 +38,14 @@ export default function SetsPage() {
   const [importUrl, setImportUrl] = useState('');
   const [importError, setImportError] = useState('');
   const [importing, setImporting] = useState(false);
+
+  // Merge state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedSetIds, setSelectedSetIds] = useState<Set<number>>(new Set());
+  const [mergeModal, setMergeModal] = useState(false);
+  const [mergeName, setMergeName] = useState('');
+  const [merging, setMerging] = useState(false);
+  const [mergeError, setMergeError] = useState('');
 
   const filteredSets = sets.filter(set =>
     set.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -73,6 +83,61 @@ export default function SetsPage() {
     }
   };
 
+  const toggleSelectSet = (id: number) => {
+    setSelectedSetIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const startSelectionMode = () => {
+    setSelectionMode(true);
+    setSelectedSetIds(new Set());
+  };
+
+  const cancelSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedSetIds(new Set());
+  };
+
+  const openMergeModal = () => {
+    const selectedSets = sets.filter(s => s.id !== undefined && selectedSetIds.has(s.id));
+    const names = selectedSets.map(s => s.name);
+    setMergeName(names.join(' + '));
+    setMergeError('');
+    setMergeModal(true);
+  };
+
+  const selectedSets = sets.filter(s => s.id !== undefined && selectedSetIds.has(s.id));
+  const languagesMatch = selectedSets.length >= 2 &&
+    selectedSets.every(s => s.languageA === selectedSets[0].languageA && s.languageB === selectedSets[0].languageB);
+
+  const handleMerge = async () => {
+    if (!mergeName.trim() || selectedSets.length < 2) return;
+    if (!languagesMatch) {
+      setMergeError('Alle sets moeten dezelfde talen hebben.');
+      return;
+    }
+
+    setMerging(true);
+    try {
+      const ids = selectedSets.map(s => s.id!);
+      const newId = await merge(mergeName, ids, selectedSets[0].languageA, selectedSets[0].languageB);
+      setMergeModal(false);
+      setSelectionMode(false);
+      setSelectedSetIds(new Set());
+      router.push(`/sets/${newId}`);
+    } catch {
+      setMergeError('Er ging iets mis bij het samenvoegen.');
+      setMerging(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 md:py-8">
       <motion.div
@@ -86,19 +151,41 @@ export default function SetsPage() {
         </div>
 
         <div className="flex gap-2 items-stretch">
-          <Button variant="secondary" onClick={() => setImportModal(true)} icon={<FontAwesomeIcon icon={faLink} />}>
-            <span className="hidden md:inline">Importeer</span>
-          </Button>
-          <Link href="/sets/generate" className="flex">
-            <Button variant="secondary" icon={<FontAwesomeIcon icon={faWandMagicSparkles} />}>
-              <span className="hidden md:inline">Genereer met AI</span>
-            </Button>
-          </Link>
-          <Link href="/sets/new" className="flex">
-            <Button icon={<FontAwesomeIcon icon={faPlus} />}>
-              Nieuwe set
-            </Button>
-          </Link>
+          {selectionMode ? (
+            <>
+              <Button variant="secondary" onClick={cancelSelectionMode} icon={<FontAwesomeIcon icon={faXmark} />}>
+                Annuleren
+              </Button>
+              <Button
+                onClick={openMergeModal}
+                disabled={selectedSetIds.size < 2}
+                icon={<FontAwesomeIcon icon={faObjectGroup} />}
+              >
+                Samenvoegen ({selectedSetIds.size})
+              </Button>
+            </>
+          ) : (
+            <>
+              {sets.length >= 2 && (
+                <Button variant="secondary" onClick={startSelectionMode} icon={<FontAwesomeIcon icon={faObjectGroup} />}>
+                  <span className="hidden md:inline">Samenvoegen</span>
+                </Button>
+              )}
+              <Button variant="secondary" onClick={() => setImportModal(true)} icon={<FontAwesomeIcon icon={faLink} />}>
+                <span className="hidden md:inline">Importeer</span>
+              </Button>
+              <Link href="/sets/generate" className="flex">
+                <Button variant="secondary" icon={<FontAwesomeIcon icon={faWandMagicSparkles} />}>
+                  <span className="hidden md:inline">Genereer met AI</span>
+                </Button>
+              </Link>
+              <Link href="/sets/new" className="flex">
+                <Button icon={<FontAwesomeIcon icon={faPlus} />}>
+                  Nieuwe set
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </motion.div>
 
@@ -164,16 +251,23 @@ export default function SetsPage() {
                 layout
                 className="relative group"
               >
-                <SetCardWithCount set={set} />
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setDeleteModal({ open: true, id: set.id! });
-                  }}
-                  className="absolute top-5 right-16 z-10 p-2 rounded-lg bg-error-light text-error border-2 border-error opacity-0 group-hover:opacity-100 transition-opacity shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer"
-                >
-                  <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-                </button>
+                <SetCardWithCount
+                  set={set}
+                  selectable={selectionMode}
+                  selected={set.id !== undefined && selectedSetIds.has(set.id)}
+                  onSelect={() => set.id !== undefined && toggleSelectSet(set.id)}
+                />
+                {!selectionMode && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setDeleteModal({ open: true, id: set.id! });
+                    }}
+                    className="absolute top-5 right-16 z-10 p-2 rounded-lg bg-error-light text-error border-2 border-error opacity-0 group-hover:opacity-100 transition-opacity shadow-brutal-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer"
+                  >
+                    <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
+                  </button>
+                )}
               </motion.div>
             ))}
           </AnimatePresence>
@@ -243,11 +337,85 @@ export default function SetsPage() {
           </Button>
         </div>
       </Modal>
+
+      <Modal
+        isOpen={mergeModal}
+        onClose={() => { setMergeModal(false); setMergeError(''); }}
+        title="Sets samenvoegen"
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-muted font-medium mb-2">
+              {selectedSets.length} sets geselecteerd:
+            </p>
+            <ul className="text-sm space-y-1">
+              {selectedSets.map(s => (
+                <li key={s.id} className="font-medium">{s.name}</li>
+              ))}
+            </ul>
+          </div>
+
+          {!languagesMatch && selectedSets.length >= 2 && (
+            <p className="text-error text-sm font-medium">
+              Alle sets moeten dezelfde talen hebben om samen te voegen.
+            </p>
+          )}
+
+          <input
+            value={mergeName}
+            onChange={e => setMergeName(e.target.value)}
+            placeholder="Naam voor samengevoegde set"
+            className="w-full bg-card border-2 border-border-bold rounded-xl px-4 py-2.5 focus:outline-none focus:border-accent text-sm"
+          />
+
+          <p className="text-xs text-muted">
+            Dubbele woordparen worden automatisch samengevoegd. De voortgang van het best bekende paar wordt behouden.
+          </p>
+
+          {mergeError && (
+            <p className="text-error text-sm font-medium">{mergeError}</p>
+          )}
+        </div>
+        <div className="flex gap-3 mt-6">
+          <Button
+            variant="secondary"
+            className="flex-1"
+            onClick={() => { setMergeModal(false); setMergeError(''); }}
+          >
+            Annuleren
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={handleMerge}
+            disabled={!mergeName.trim() || !languagesMatch || merging}
+          >
+            {merging ? 'Samenvoegen...' : 'Samenvoegen'}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
 
-function SetCardWithCount({ set }: { set: { id?: number; name: string; languageA: string; languageB: string; createdAt: Date; updatedAt: Date } }) {
+function SetCardWithCount({
+  set,
+  selectable,
+  selected,
+  onSelect,
+}: {
+  set: { id?: number; name: string; languageA: string; languageB: string; createdAt: Date; updatedAt: Date };
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
+}) {
   const { pairs } = useWordPairs(set.id);
-  return <SetCard set={set} pairCount={pairs.length} />;
+  return (
+    <SetCard
+      set={set}
+      pairCount={pairs.length}
+      selectable={selectable}
+      selected={selected}
+      onSelect={onSelect}
+    />
+  );
 }

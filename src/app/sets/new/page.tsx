@@ -5,28 +5,41 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Card, Input, Select } from '@/components/ui';
 import { WordPairEditor } from '@/components/sets';
-import { useCreateWordSet, useOcr, useCamera } from '@/hooks';
+import { ImagePreviewStack } from '@/components/ocr';
+import { useCreateWordSet, useWordSets, useWordPairs, useCamera } from '@/hooks';
+import { useMultiImageOcr } from '@/hooks/useMultiImageOcr';
 import { languages } from '@/lib/languages';
 import { getGeminiApiKey, setGeminiApiKey } from '@/lib/settings';
-import { faCamera, faKeyboard, faImage, faSpinner, faKey } from '@fortawesome/free-solid-svg-icons';
+import { deduplicateWordPairs } from '@/lib/dedup';
+import { db } from '@/lib/db';
+import { faCamera, faKeyboard, faImage, faSpinner, faKey, faCog } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 type InputMode = 'manual' | 'upload' | 'camera';
+type TargetMode = 'new' | 'existing';
 
 export default function NewSetPage() {
   const router = useRouter();
   const { create } = useCreateWordSet();
-  const { isProcessing, progress, parsedPairs, lowConfidencePairs, error: ocrError, process, reset: resetOcr } = useOcr();
+  const { sets } = useWordSets();
+  const {
+    images, addImages, removeImage,
+    isProcessing, progress, currentImageIndex,
+    parsedPairs, lowConfidencePairs,
+    error: ocrError, processAll, reset: resetOcr,
+  } = useMultiImageOcr();
   const { isActive, error: cameraError, start, stop, capture, videoRef } = useCamera();
 
   const [name, setName] = useState('');
   const [languageA, setLanguageA] = useState('en');
   const [languageB, setLanguageB] = useState('nl');
   const [inputMode, setInputMode] = useState<InputMode>('manual');
+  const [targetMode, setTargetMode] = useState<TargetMode>('new');
+  const [targetSetId, setTargetSetId] = useState<number | null>(null);
   const [pairs, setPairs] = useState<{ termA: string; termB: string }[]>([{ termA: '', termB: '' }]);
   const [isSaving, setIsSaving] = useState(false);
   const [showOcrResults, setShowOcrResults] = useState(false);
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKeyValue] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -34,6 +47,15 @@ export default function NewSetPage() {
   const hasApiKey = typeof window !== 'undefined' && !!getGeminiApiKey();
 
   const languageOptions = languages.map(l => ({ value: l.code, label: l.name }));
+
+  const targetSet = targetMode === 'existing' && targetSetId
+    ? sets.find(s => s.id === targetSetId)
+    : null;
+
+  const effectiveLanguageA = targetSet ? targetSet.languageA : languageA;
+  const effectiveLanguageB = targetSet ? targetSet.languageB : languageB;
+
+  const setOptions = sets.map(s => ({ value: String(s.id), label: s.name }));
 
   const applyOcrResults = (result: { valid: typeof parsedPairs; lowConfidence: typeof lowConfidencePairs } | null) => {
     if (!result) return;
@@ -48,34 +70,31 @@ export default function NewSetPage() {
   };
 
   const getOcrLangs = () => {
-    const langA = languages.find(l => l.code === languageA);
-    const langB = languages.find(l => l.code === languageB);
+    const langA = languages.find(l => l.code === effectiveLanguageA);
+    const langB = languages.find(l => l.code === effectiveLanguageB);
     const codeA = langA?.tesseractCode || 'eng';
     const codeB = langB?.tesseractCode || 'nld';
     return codeA === codeB ? codeA : `${codeA}+${codeB}`;
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    addImages(Array.from(files));
     e.target.value = '';
-
-    const langAName = languages.find(l => l.code === languageA)?.name || languageA;
-    const langBName = languages.find(l => l.code === languageB)?.name || languageB;
-    const result = await process(file, getOcrLangs(), langAName, langBName);
-    applyOcrResults(result);
   };
 
   const handleCapture = async () => {
     const blob = await capture();
     if (!blob) return;
+    addImages([blob]);
+  };
 
-    const langAName = languages.find(l => l.code === languageA)?.name || languageA;
-    const langBName = languages.find(l => l.code === languageB)?.name || languageB;
-    const result = await process(blob, getOcrLangs(), langAName, langBName);
+  const handleProcessAll = async () => {
+    const langAName = languages.find(l => l.code === effectiveLanguageA)?.name || effectiveLanguageA;
+    const langBName = languages.find(l => l.code === effectiveLanguageB)?.name || effectiveLanguageB;
+    const result = await processAll(getOcrLangs(), langAName, langBName);
     applyOcrResults(result);
-    stop();
   };
 
   const handleOcrConfirm = () => {
@@ -89,21 +108,58 @@ export default function NewSetPage() {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) return;
-    
     const validPairs = pairs.filter(p => p.termA.trim() && p.termB.trim());
     if (validPairs.length === 0) return;
 
     setIsSaving(true);
     try {
-      const setId = await create(name, languageA, languageB, validPairs);
-      router.push(`/sets/${setId}`);
+      if (targetMode === 'existing' && targetSetId && targetSet) {
+        const existingPairs = await db.wordPairs.where('setId').equals(targetSetId).toArray();
+        const combined = [
+          ...existingPairs.map(p => ({ termA: p.termA, termB: p.termB, correctCount: p.correctCount })),
+          ...validPairs.map(p => ({ termA: p.termA, termB: p.termB, correctCount: 0 })),
+        ];
+        const deduped = deduplicateWordPairs(combined);
+        const newPairs = deduped.filter(dp =>
+          !existingPairs.some(ep =>
+            ep.termA.trim().toLowerCase() === dp.termA.trim().toLowerCase() &&
+            ep.termB.trim().toLowerCase() === dp.termB.trim().toLowerCase()
+          )
+        );
+
+        if (newPairs.length > 0) {
+          const now = new Date();
+          await db.wordPairs.bulkAdd(
+            newPairs.map(p => ({
+              setId: targetSetId,
+              termA: p.termA,
+              termB: p.termB,
+              easeFactor: 2.5,
+              interval: 0,
+              nextReview: now,
+              correctCount: 0,
+              incorrectCount: 0,
+            }))
+          );
+          await db.wordSets.update(targetSetId, { updatedAt: now });
+        }
+
+        router.push(`/sets/${targetSetId}`);
+      } else {
+        if (!name.trim()) return;
+        const setId = await create(name, effectiveLanguageA, effectiveLanguageB, validPairs);
+        router.push(`/sets/${setId}`);
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setIsSaving(false);
     }
   };
+
+  const canSave = targetMode === 'existing'
+    ? targetSetId !== null && pairs.filter(p => p.termA.trim() && p.termB.trim()).length > 0
+    : name.trim() !== '' && pairs.filter(p => p.termA.trim() && p.termB.trim()).length > 0;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 md:py-8">
@@ -124,27 +180,56 @@ export default function NewSetPage() {
       >
         <Card>
           <div className="space-y-4">
-            <Input
-              label="Naam"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="bijv. Engels hoofdstuk 5"
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <Select
-                label="Taal A"
-                value={languageA}
-                onChange={e => setLanguageA(e.target.value)}
-                options={languageOptions}
-              />
-              <Select
-                label="Taal B"
-                value={languageB}
-                onChange={e => setLanguageB(e.target.value)}
-                options={languageOptions}
-              />
+            <div className="flex gap-2">
+              <Button
+                variant={targetMode === 'new' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => { setTargetMode('new'); setTargetSetId(null); }}
+              >
+                Nieuwe set
+              </Button>
+              <Button
+                variant={targetMode === 'existing' ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => setTargetMode('existing')}
+                disabled={sets.length === 0}
+              >
+                Toevoegen aan set
+              </Button>
             </div>
+
+            {targetMode === 'existing' ? (
+              <Select
+                label="Kies set"
+                value={targetSetId ? String(targetSetId) : ''}
+                onChange={e => setTargetSetId(e.target.value ? Number(e.target.value) : null)}
+                options={[{ value: '', label: 'Selecteer een set...' }, ...setOptions]}
+              />
+            ) : (
+              <>
+                <Input
+                  label="Naam"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="bijv. Engels hoofdstuk 5"
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Select
+                    label="Taal A"
+                    value={languageA}
+                    onChange={e => setLanguageA(e.target.value)}
+                    options={languageOptions}
+                  />
+                  <Select
+                    label="Taal B"
+                    value={languageB}
+                    onChange={e => setLanguageB(e.target.value)}
+                    options={languageOptions}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="border-t border-border pt-4">
               <button
@@ -163,7 +248,7 @@ export default function NewSetPage() {
                   <div className="flex gap-2">
                     <Input
                       value={apiKey}
-                      onChange={e => setApiKey(e.target.value)}
+                      onChange={e => setApiKeyValue(e.target.value)}
                       placeholder={hasApiKey ? '••••••••' : 'Plak je Gemini API key'}
                       type="password"
                     />
@@ -172,7 +257,7 @@ export default function NewSetPage() {
                       variant="secondary"
                       onClick={() => {
                         setGeminiApiKey(apiKey);
-                        setApiKey('');
+                        setApiKeyValue('');
                         setShowApiKey(false);
                       }}
                       disabled={!apiKey.trim()}
@@ -191,7 +276,7 @@ export default function NewSetPage() {
             <Button
               variant={inputMode === 'manual' ? 'primary' : 'secondary'}
               size="sm"
-              onClick={() => { setInputMode('manual'); resetOcr(); }}
+              onClick={() => { setInputMode('manual'); resetOcr(); stop(); }}
               icon={<FontAwesomeIcon icon={faKeyboard} />}
             >
               Handmatig
@@ -225,8 +310,8 @@ export default function NewSetPage() {
                 <WordPairEditor
                   pairs={pairs}
                   onChange={setPairs}
-                  languageA={languageA.toUpperCase()}
-                  languageB={languageB.toUpperCase()}
+                  languageA={effectiveLanguageA.toUpperCase()}
+                  languageB={effectiveLanguageB.toUpperCase()}
                 />
               </motion.div>
             )}
@@ -243,6 +328,7 @@ export default function NewSetPage() {
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handleFileUpload}
                   className="hidden"
                 />
@@ -250,10 +336,40 @@ export default function NewSetPage() {
                   variant="secondary"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isProcessing}
-                  icon={isProcessing ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={faImage} />}
+                  icon={<FontAwesomeIcon icon={faImage} />}
                 >
-                  {isProcessing ? `Verwerken... ${progress}%` : 'Kies afbeelding'}
+                  Kies afbeeldingen
                 </Button>
+
+                <ImagePreviewStack
+                  images={images}
+                  onRemove={removeImage}
+                  disabled={isProcessing}
+                />
+
+                {images.length > 0 && !isProcessing && (
+                  <div className="mt-4">
+                    <Button onClick={handleProcessAll} icon={<FontAwesomeIcon icon={faCog} />}>
+                      Verwerken ({images.length} afbeelding{images.length !== 1 ? 'en' : ''})
+                    </Button>
+                  </div>
+                )}
+
+                {isProcessing && (
+                  <div className="mt-4">
+                    <p className="text-sm text-muted mb-2">
+                      <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                      Afbeelding {currentImageIndex + 1}/{images.length} verwerken... {progress}%
+                    </p>
+                    <div className="w-full bg-border rounded-full h-2">
+                      <div
+                        className="bg-accent h-2 rounded-full transition-all"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {ocrError && <p className="text-error mt-2 text-sm">{ocrError}</p>}
               </motion.div>
             )}
@@ -280,14 +396,45 @@ export default function NewSetPage() {
                     </div>
                   )}
                 </div>
-                <Button
-                  onClick={handleCapture}
-                  disabled={!isActive || isProcessing}
-                  loading={isProcessing}
-                  icon={<FontAwesomeIcon icon={faCamera} />}
-                >
-                  {isProcessing ? `Verwerken... ${progress}%` : 'Foto maken'}
-                </Button>
+
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    onClick={handleCapture}
+                    disabled={!isActive || isProcessing}
+                    icon={<FontAwesomeIcon icon={faCamera} />}
+                  >
+                    Foto maken
+                  </Button>
+                  {images.length > 0 && !isProcessing && (
+                    <Button
+                      onClick={() => { stop(); handleProcessAll(); }}
+                      icon={<FontAwesomeIcon icon={faCog} />}
+                    >
+                      Verwerken ({images.length})
+                    </Button>
+                  )}
+                </div>
+
+                <ImagePreviewStack
+                  images={images}
+                  onRemove={removeImage}
+                  disabled={isProcessing}
+                />
+
+                {isProcessing && (
+                  <div className="mt-4">
+                    <p className="text-sm text-muted mb-2">
+                      <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                      Afbeelding {currentImageIndex + 1}/{images.length} verwerken... {progress}%
+                    </p>
+                    <div className="w-full bg-border rounded-full h-2">
+                      <div
+                        className="bg-accent h-2 rounded-full transition-all"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -311,8 +458,8 @@ export default function NewSetPage() {
                     onChange={(updated) => {
                       setPairs(updated);
                     }}
-                    languageA={languageA.toUpperCase()}
-                    languageB={languageB.toUpperCase()}
+                    languageA={effectiveLanguageA.toUpperCase()}
+                    languageB={effectiveLanguageB.toUpperCase()}
                   />
                 </>
               ) : (
@@ -345,10 +492,10 @@ export default function NewSetPage() {
           <Button
             className="flex-1"
             onClick={handleSave}
-            disabled={!name.trim() || pairs.filter(p => p.termA.trim() && p.termB.trim()).length === 0}
+            disabled={!canSave}
             loading={isSaving}
           >
-            Opslaan
+            {targetMode === 'existing' ? 'Toevoegen' : 'Opslaan'}
           </Button>
         </div>
       </motion.div>
