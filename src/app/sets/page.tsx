@@ -410,7 +410,7 @@ function SetCardWithCount({
 }) {
   const { pairs } = useWordPairs(set.id);
   const { sessions } = usePracticeSessions(set.id);
-  const recentScore = sessions.length > 0
+  const recentScore = sessions.length > 0 && sessions[0].totalQuestions > 0
     ? Math.round((sessions[0].correctAnswers / sessions[0].totalQuestions) * 100)
     : undefined;
   return (
