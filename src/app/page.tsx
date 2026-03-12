@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button, Card, CircularProgress } from '@/components/ui';
 import { SetCard, SetCardSkeleton } from '@/components/sets';
-import { useWordSets, useWordPairs, useAllPracticeSessions } from '@/hooks';
+import { useWordSets, useWordPairs, useAllPracticeSessions, usePracticeSessions } from '@/hooks';
 import { faGraduationCap, faPlus, faArrowRight, faBookOpen, faFire, faTrophy } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
@@ -165,5 +165,9 @@ export default function Dashboard() {
 
 function SetCardWithCount({ set }: { set: { id?: number; name: string; languageA: string; languageB: string; createdAt: Date; updatedAt: Date } }) {
   const { pairs } = useWordPairs(set.id);
-  return <SetCard set={set} pairCount={pairs.length} />;
+  const { sessions } = usePracticeSessions(set.id);
+  const recentScore = sessions.length > 0
+    ? Math.round((sessions[0].correctAnswers / sessions[0].totalQuestions) * 100)
+    : undefined;
+  return <SetCard set={set} pairCount={pairs.length} recentScore={recentScore} />;
 }

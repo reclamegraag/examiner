@@ -77,6 +77,7 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
   };
 
   const sessionSaved = useRef(false);
+  const sessionStartedAt = useRef(new Date());
 
   useEffect(() => {
     if (isComplete && !sessionSaved.current) {
@@ -85,7 +86,7 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
       createSession({
         setId,
         mode,
-        startedAt: new Date(),
+        startedAt: sessionStartedAt.current,
         completedAt: new Date(),
         totalQuestions: stats.total,
         correctAnswers: stats.correct,
@@ -98,6 +99,7 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
   useEffect(() => {
     if (!isComplete) {
       sessionSaved.current = false;
+      sessionStartedAt.current = new Date();
     }
   }, [isComplete]);
 

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button, ProgressBar, CircularProgress } from '@/components/ui';
-import { useSpeech, useUpdateWordPair } from '@/hooks';
+import { useSpeech, useUpdateWordPair, useCreatePracticeSession } from '@/hooks';
 import { faVolumeHigh, faArrowLeft, faCheck, faXmark, faRedo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { WordPair, WordSet, PracticeConfig } from '@/types';
@@ -26,12 +26,16 @@ function shuffleArray<T>(array: T[]): T[] {
 
 export function QuickMode({ pairs, config, set }: QuickModeProps) {
   const { update } = useUpdateWordPair();
+  const { create: createSession } = useCreatePracticeSession();
   const { speakText, isSupported } = useSpeech();
 
   const [queue, setQueue] = useState<WordPair[]>(() => shuffleArray(pairs));
   const [completed, setCompleted] = useState<Set<number>>(new Set());
   const [showAnswer, setShowAnswer] = useState(false);
   const [sessionStats, setSessionStats] = useState({ correct: 0, incorrect: 0 });
+  const [reviewedPairs, setReviewedPairs] = useState<Array<{ pairId: number; termA: string; termB: string; correct: boolean }>>([]);
+  const sessionStartedAt = useRef(new Date());
+  const sessionSaved = useRef(false);
 
   const currentPair = queue[0] || null;
   const isComplete = queue.length === 0;
@@ -62,6 +66,13 @@ export function QuickMode({ pairs, config, set }: QuickModeProps) {
       incorrect: prev.incorrect + (isCorrect ? 0 : 1),
     }));
 
+    setReviewedPairs(prev => [...prev, {
+      pairId: currentPair.id!,
+      termA: currentPair.termA,
+      termB: currentPair.termB,
+      correct: isCorrect,
+    }]);
+
     if (isCorrect) {
       setCompleted(prev => new Set([...prev, currentPair.id!]));
       setQueue(prev => prev.slice(1));
@@ -78,11 +89,37 @@ export function QuickMode({ pairs, config, set }: QuickModeProps) {
     setShowAnswer(false);
   };
 
+  useEffect(() => {
+    if (isComplete && !sessionSaved.current) {
+      sessionSaved.current = true;
+      // Use first-round stats: count unique completed words as correct, rest as incorrect
+      const firstRoundCorrect = reviewedPairs.filter((r, i) =>
+        r.correct && reviewedPairs.findIndex(p => p.pairId === r.pairId) === i
+      ).length;
+      const firstRoundTotal = pairs.length;
+      const firstRoundIncorrect = firstRoundTotal - firstRoundCorrect;
+
+      createSession({
+        setId: set.id!,
+        mode: 'quick',
+        startedAt: sessionStartedAt.current,
+        completedAt: new Date(),
+        totalQuestions: firstRoundTotal,
+        correctAnswers: firstRoundCorrect,
+        incorrectAnswers: firstRoundIncorrect,
+        reviewedPairs,
+      });
+    }
+  }, [isComplete]);
+
   const handleReset = () => {
     setQueue(shuffleArray(pairs));
     setCompleted(new Set());
     setShowAnswer(false);
     setSessionStats({ correct: 0, incorrect: 0 });
+    setReviewedPairs([]);
+    sessionStartedAt.current = new Date();
+    sessionSaved.current = false;
   };
 
   const handleSpeak = () => {

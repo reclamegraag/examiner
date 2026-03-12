@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Card, Input, Modal } from '@/components/ui';
 import { SetCard, SetCardSkeleton } from '@/components/sets';
-import { useWordSets, useWordPairs, useDeleteWordSet, useCreateWordSet } from '@/hooks';
+import { useWordSets, useWordPairs, useDeleteWordSet, useCreateWordSet, usePracticeSessions } from '@/hooks';
 import { useMergeSets } from '@/hooks/useMergeSets';
 import { faPlus, faSearch, faTrash, faWandMagicSparkles, faLink, faObjectGroup, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -409,10 +409,15 @@ function SetCardWithCount({
   onSelect?: () => void;
 }) {
   const { pairs } = useWordPairs(set.id);
+  const { sessions } = usePracticeSessions(set.id);
+  const recentScore = sessions.length > 0
+    ? Math.round((sessions[0].correctAnswers / sessions[0].totalQuestions) * 100)
+    : undefined;
   return (
     <SetCard
       set={set}
       pairCount={pairs.length}
+      recentScore={recentScore}
       selectable={selectable}
       selected={selected}
       onSelect={onSelect}

@@ -118,8 +118,11 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
 
   const stats = {
     total: pairs.length,
-    mastered: pairs.filter(p => p.correctCount > 0 && p.correctCount > p.incorrectCount).length,
-    learning: pairs.filter(p => p.correctCount === 0).length,
+    mastered: pairs.filter(p => {
+      const total = p.correctCount + p.incorrectCount;
+      return total >= 3 && p.correctCount / total >= 0.7;
+    }).length,
+    learning: pairs.filter(p => p.correctCount === 0 && p.incorrectCount === 0).length,
   };
 
   return (
