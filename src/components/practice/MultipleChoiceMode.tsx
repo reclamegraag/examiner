@@ -66,11 +66,12 @@ export function MultipleChoiceMode({
 
   useEffect(() => {
     if (selected === null) return;
+    const delay = selected === correctAnswer ? 1500 : 4000;
     const timer = setTimeout(() => {
       onNext();
-    }, 2500);
+    }, delay);
     return () => clearTimeout(timer);
-  }, [selected, onNext]);
+  }, [selected, correctAnswer, onNext]);
 
   const handleSelect = (option: string) => {
     if (selected) return;
@@ -148,8 +149,10 @@ export function MultipleChoiceMode({
                     !showFeedback ? 'shadow-brutal-sm active:shadow-none active:translate-x-[2px] active:translate-y-[2px]' : ''
                   }`}
                   whileTap={{ scale: showFeedback ? 1 : 0.98 }}
+                  animate={showFeedback && isCorrectOption && !isCorrect ? { scale: 1.03 } : { scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                 >
-                  <span className="text-base">{option}</span>
+                  <span className={showFeedback && isCorrectOption && !isCorrect ? 'text-lg font-bold' : 'text-base'}>{option}</span>
                   {showFeedback && isCorrectOption && (
                     <FontAwesomeIcon icon={faCheck} className="w-4 h-4 ml-2" />
                   )}
@@ -160,6 +163,27 @@ export function MultipleChoiceMode({
               );
             })}
           </div>
+
+          {showFeedback && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`mt-3 p-3 rounded-xl border-2 text-center font-bold ${
+                isCorrect
+                  ? 'bg-success-light border-success text-success'
+                  : 'bg-error-light border-error text-error'
+              }`}
+            >
+              {isCorrect ? (
+                <p>Goed!</p>
+              ) : (
+                <>
+                  <p>Fout!</p>
+                  <p className="mt-1 text-lg">Het juiste antwoord is: <span className="underline">{correctAnswer}</span></p>
+                </>
+              )}
+            </motion.div>
+          )}
 
           <div className={`mt-3 ${!showFeedback ? 'invisible' : ''}`}>
             <Button
