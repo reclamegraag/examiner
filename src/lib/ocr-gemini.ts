@@ -28,15 +28,32 @@ function imageToBase64(image: Blob | File): Promise<{ base64: string; mimeType: 
   });
 }
 
+export interface GeminiOcrOptions {
+  /** Verwerk de afbeelding als werkwoordvervoegingstabel i.p.v. vertaalparen.
+   *  termA = het hele/onbepaalde werkwoord, termB = de overige vormen
+   *  (bv. verleden tijd / voltooid deelwoord) samen, gescheiden door " / ". */
+  conjugation?: boolean;
+}
+
 export async function processImageWithGemini(
   image: Blob | File,
   apiKey: string,
   languageA: string,
   languageB: string,
+  options: GeminiOcrOptions = {},
 ): Promise<ParsedWordPair[]> {
   const { base64, mimeType } = await imageToBase64(image);
 
-  const prompt = `Extract ALL word pairs from this vocabulary list image.
+  const prompt = options.conjugation
+    ? `This image shows a verb conjugation table (for example irregular verbs with columns such as Infinitive, Past Simple and Past Participle).
+Extract EVERY verb. Put the base/infinitive form in "termA".
+Combine ALL remaining forms of the same verb (for example past simple and past participle) into "termB", separated by " / ", in the same column order as the table.
+Keep alternative spellings exactly as written (for example "was/were" or "burned/burnt").
+Ignore phonetic or pronunciation transcriptions in square brackets like [biː], column headers, page titles and numbering.
+Each verb must be ONE object; never split tenses of the same verb across rows.
+Return ONLY a JSON array of objects with "termA" and "termB".
+Example: [{"termA":"be","termB":"was/were / been"},{"termA":"begin","termB":"began / begun"},{"termA":"come","termB":"came / come"}]`
+    : `Extract ALL word pairs from this vocabulary list image.
 The list contains pairs in two languages: ${languageA} and ${languageB}.
 Return ONLY a JSON array of objects with "termA" (${languageA}) and "termB" (${languageB}).
 Ignore numbering, bullet points, and headers. Only return the word pairs.

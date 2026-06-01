@@ -39,6 +39,7 @@ export default function NewSetPage() {
   const [pairs, setPairs] = useState<{ termA: string; termB: string }[]>([{ termA: '', termB: '' }]);
   const [isSaving, setIsSaving] = useState(false);
   const [showOcrResults, setShowOcrResults] = useState(false);
+  const [conjugation, setConjugation] = useState(false);
   const [apiKey, setApiKeyValue] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
 
@@ -93,7 +94,7 @@ export default function NewSetPage() {
   const handleProcessAll = async () => {
     const langAName = languages.find(l => l.code === effectiveLanguageA)?.name || effectiveLanguageA;
     const langBName = languages.find(l => l.code === effectiveLanguageB)?.name || effectiveLanguageB;
-    const result = await processAll(getOcrLangs(), langAName, langBName);
+    const result = await processAll(getOcrLangs(), langAName, langBName, { conjugation });
     applyOcrResults(result);
   };
 
@@ -299,6 +300,24 @@ export default function NewSetPage() {
             </Button>
           </div>
 
+          {inputMode !== 'manual' && (
+            <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border-2 border-border-bold bg-card px-4 py-3 mb-4 transition-colors hover:border-accent">
+              <input
+                type="checkbox"
+                checked={conjugation}
+                onChange={e => setConjugation(e.target.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-accent cursor-pointer"
+              />
+              <span>
+                <span className="block text-sm font-bold text-foreground">Werkwoordvervoegingen</span>
+                <span className="block text-xs text-muted font-medium">
+                  Voor een vervoegingstabel (bv. Infinitive / Past Simple / Past Participle): links
+                  het hele werkwoord, rechts de verleden tijd en het voltooid deelwoord samen.
+                </span>
+              </span>
+            </label>
+          )}
+
           <AnimatePresence mode="wait">
             {inputMode === 'manual' && (
               <motion.div
@@ -458,8 +477,8 @@ export default function NewSetPage() {
                     onChange={(updated) => {
                       setPairs(updated);
                     }}
-                    languageA={effectiveLanguageA.toUpperCase()}
-                    languageB={effectiveLanguageB.toUpperCase()}
+                    languageA={conjugation ? 'Werkwoord' : effectiveLanguageA.toUpperCase()}
+                    languageB={conjugation ? 'Vervoegingen' : effectiveLanguageB.toUpperCase()}
                   />
                 </>
               ) : (
