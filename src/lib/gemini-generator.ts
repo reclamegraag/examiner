@@ -20,6 +20,12 @@ const difficultyLabel: Record<Difficulty, string> = {
   advanced: 'gevorderd (complexe, minder gangbare woorden)',
 };
 
+export interface GenerateOptions {
+  /** Genereer werkwoordvervoegingen i.p.v. vertaalparen. termA = hele werkwoord,
+   *  termB = de overige vervoegingen (bv. verleden tijd / voltooid deelwoord) samen. */
+  conjugation?: boolean;
+}
+
 export async function generateWordPairs(
   apiKey: string,
   theme: string,
@@ -27,8 +33,20 @@ export async function generateWordPairs(
   languageB: string,
   count: number,
   difficulty: Difficulty,
+  options: GenerateOptions = {},
 ): Promise<{ termA: string; termB: string }[]> {
-  const prompt = `Genereer precies ${count} woordparen over het thema "${theme}".
+  const prompt = options.conjugation
+    ? `Genereer precies ${count} werkwoordvervoegingen in het ${languageA} over het thema "${theme}".
+Moeilijkheidsgraad: ${difficultyLabel[difficulty]}
+
+Veel werkwoorden hebben meerdere vormen (bijvoorbeeld hele werkwoord/tegenwoordige tijd, verleden tijd en voltooid deelwoord).
+Zet de hele/onbepaalde vorm in "termA" en voeg ALLE overige vervoegingen samen in "termB", gescheiden door " / ".
+Maak GEEN aparte regel per tijd; combineer alle tijden van hetzelfde werkwoord in één object. Vermijd duplicaten.
+
+Geef ALLEEN een JSON-array terug met objecten met "termA" en "termB".
+Geen uitleg, geen nummering, alleen de JSON-array.
+Voorbeeld: [{"termA":"come","termB":"came / come"},{"termA":"buy","termB":"bought / bought"},{"termA":"choose","termB":"chose / chosen"}]`
+    : `Genereer precies ${count} woordparen over het thema "${theme}".
 Taal A: ${languageA}
 Taal B: ${languageB}
 Moeilijkheidsgraad: ${difficultyLabel[difficulty]}
