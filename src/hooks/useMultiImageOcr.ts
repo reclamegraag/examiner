@@ -27,6 +27,7 @@ interface UseMultiImageOcrReturn {
     languageCode: string,
     languageA: string,
     languageB: string,
+    options?: { conjugation?: boolean },
   ) => Promise<{ valid: ParsedWordPair[]; lowConfidence: ParsedWordPair[] } | null>;
   reset: () => void;
 }
@@ -80,6 +81,7 @@ export function useMultiImageOcr(): UseMultiImageOcrReturn {
     languageCode: string,
     languageA: string,
     languageB: string,
+    options: { conjugation?: boolean } = {},
   ): Promise<{ valid: ParsedWordPair[]; lowConfidence: ParsedWordPair[] } | null> => {
     if (images.length === 0) return null;
 
@@ -101,7 +103,7 @@ export function useMultiImageOcr(): UseMultiImageOcrReturn {
 
         if (apiKey) {
           setProgress(Math.round(((i + 0.5) / total) * 100));
-          const pairs = await processImageWithGemini(image.file, apiKey, languageA, languageB);
+          const pairs = await processImageWithGemini(image.file, apiKey, languageA, languageB, { conjugation: options.conjugation });
           const valid = pairs.filter(p => p.confidence >= 60);
           const lowConfidence = pairs.filter(p => p.confidence < 60);
           allValid.push(...valid);
