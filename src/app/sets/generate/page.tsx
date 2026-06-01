@@ -18,10 +18,7 @@ const difficultyOptions = [
   { value: 'advanced', label: 'Gevorderd' },
 ];
 
-const countOptions = [5, 10, 15, 20, 25, 30, 40, 50].map(n => ({
-  value: String(n),
-  label: `${n} woordparen`,
-}));
+const countValues = [5, 10, 15, 20, 25, 30, 40, 50];
 
 type Phase = 'config' | 'results';
 
@@ -35,6 +32,7 @@ export default function GeneratePage() {
   const [languageB, setLanguageB] = useState('nl');
   const [count, setCount] = useState('10');
   const [difficulty, setDifficulty] = useState<Difficulty>('intermediate');
+  const [conjugation, setConjugation] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pairs, setPairs] = useState<{ termA: string; termB: string }[]>([]);
@@ -42,6 +40,8 @@ export default function GeneratePage() {
   const [isSaving, setIsSaving] = useState(false);
 
   const languageOptions = languages.map(l => ({ value: l.code, label: l.name }));
+  const itemNoun = conjugation ? 'werkwoorden' : 'woordparen';
+  const countOptions = countValues.map(n => ({ value: String(n), label: `${n} ${itemNoun}` }));
   const apiKey = typeof window !== 'undefined' ? getGeminiApiKey() : null;
 
   const langAName = languages.find(l => l.code === languageA)?.name ?? languageA;
@@ -64,18 +64,23 @@ export default function GeneratePage() {
         key,
         theme.trim(),
         langAName,
-        langBName,
+        conjugation ? langAName : langBName,
         parseInt(count, 10),
         difficulty,
+        { conjugation },
       );
 
       if (generated.length === 0) {
-        setError('Gemini heeft geen woordparen gegenereerd. Probeer een ander thema.');
+        setError('Gemini heeft niets gegenereerd. Probeer een ander thema.');
         return;
       }
 
       setPairs(generated);
-      setSetName(`${theme.trim()} (${langAName} → ${langBName})`);
+      setSetName(
+        conjugation
+          ? `${theme.trim()} (${langAName} vervoegingen)`
+          : `${theme.trim()} (${langAName} → ${langBName})`,
+      );
       setPhase('results');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Onbekende fout');
@@ -91,7 +96,12 @@ export default function GeneratePage() {
 
     setIsSaving(true);
     try {
-      const setId = await create(setName.trim(), languageA, languageB, validPairs);
+      const setId = await create(
+        setName.trim(),
+        languageA,
+        conjugation ? languageA : languageB,
+        validPairs,
+      );
       router.push(`/sets/${setId}`);
     } catch (err) {
       console.error(err);
@@ -162,22 +172,40 @@ export default function GeneratePage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <Select
-                    label="Van taal"
+                    label={conjugation ? 'Taal' : 'Van taal'}
                     value={languageA}
                     onChange={e => setLanguageA(e.target.value)}
                     options={languageOptions}
                   />
-                  <Select
-                    label="Naar taal"
-                    value={languageB}
-                    onChange={e => setLanguageB(e.target.value)}
-                    options={languageOptions}
-                  />
+                  {!conjugation && (
+                    <Select
+                      label="Naar taal"
+                      value={languageB}
+                      onChange={e => setLanguageB(e.target.value)}
+                      options={languageOptions}
+                    />
+                  )}
                 </div>
+
+                <label className="flex items-start gap-3 cursor-pointer select-none rounded-xl border-2 border-border-bold bg-card px-4 py-3 transition-colors hover:border-accent">
+                  <input
+                    type="checkbox"
+                    checked={conjugation}
+                    onChange={e => setConjugation(e.target.checked)}
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-accent cursor-pointer"
+                  />
+                  <span>
+                    <span className="block text-sm font-bold text-foreground">Werkwoordvervoegingen</span>
+                    <span className="block text-xs text-muted font-medium">
+                      Eén kaartje per werkwoord: het hele werkwoord met daarachter de overige tijden
+                      (bv. verleden tijd / voltooid deelwoord) samen.
+                    </span>
+                  </span>
+                </label>
 
                 <div className="grid grid-cols-2 gap-4">
                   <Select
-                    label="Aantal woordparen"
+                    label={`Aantal ${itemNoun}`}
                     value={count}
                     onChange={e => setCount(e.target.value)}
                     options={countOptions}
@@ -233,7 +261,7 @@ export default function GeneratePage() {
           >
             <Card>
               <p className="text-sm text-muted mb-4">
-                Gemini heeft <strong>{pairs.length} woordparen</strong> gegenereerd over{' '}
+                Gemini heeft <strong>{pairs.length} {itemNoun}</strong> gegenereerd over{' '}
                 <strong>{theme}</strong>. Pas ze aan als gewenst.
               </p>
 
@@ -248,8 +276,8 @@ export default function GeneratePage() {
               <WordPairEditor
                 pairs={pairs}
                 onChange={setPairs}
-                languageA={languageA.toUpperCase()}
-                languageB={languageB.toUpperCase()}
+                languageA={conjugation ? 'Werkwoord' : languageA.toUpperCase()}
+                languageB={conjugation ? 'Vervoegingen' : languageB.toUpperCase()}
               />
             </Card>
 
