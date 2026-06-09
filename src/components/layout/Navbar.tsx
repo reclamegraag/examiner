@@ -16,7 +16,7 @@ export function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="hidden md:flex fixed top-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-lg border-b-2 border-border-bold z-40">
+    <nav className="hidden md:flex fixed top-0 left-0 right-0 h-16 bg-card border-b-2 border-border-bold z-40">
       <div className="max-w-6xl mx-auto w-full px-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="w-9 h-9 bg-accent rounded-lg border-2 border-border-bold shadow-brutal-sm flex items-center justify-center group-hover:shadow-none group-hover:translate-x-[2px] group-hover:translate-y-[2px] transition-all">
