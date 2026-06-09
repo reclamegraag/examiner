@@ -9,7 +9,7 @@ import { MultipleChoiceMode } from '@/components/practice/MultipleChoiceMode';
 import { QuickMode } from '@/components/practice/QuickMode';
 import { CircularProgress } from '@/components/ui';
 import { calculateNextReview, getQualityFromCorrect } from '@/lib/spaced-repetition';
-import type { PracticeMode, WordPair, PracticeConfig } from '@/types';
+import type { PracticeMode, PracticeConfig } from '@/types';
 
 export default function PracticeSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -55,6 +55,24 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
     reset,
     getStats,
   } = usePracticeSession({ pairs: filteredPairs, config });
+
+  // Resolve the question/answer direction once per question. For the 'random'
+  // direction this must NOT be recomputed on every render: saving an answer
+  // triggers a Dexie live-query update which re-renders this page, and a fresh
+  // Math.random() would flip question/answer mid-question — desyncing the frozen
+  // multiple-choice options and marking a correct pick as wrong.
+  const questionAnswer = useMemo(() => {
+    if (!currentPair) return null;
+    if (direction === 'random') {
+      return Math.random() > 0.5
+        ? { question: currentPair.termA, answer: currentPair.termB }
+        : { question: currentPair.termB, answer: currentPair.termA };
+    }
+    return direction === 'a-to-b'
+      ? { question: currentPair.termA, answer: currentPair.termB }
+      : { question: currentPair.termB, answer: currentPair.termA };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questionKey, direction, currentPair?.id]);
 
   const handleAnswer = async (isCorrect: boolean, timeMs?: number) => {
     answer(isCorrect, timeMs);
@@ -125,17 +143,6 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
     );
   }
 
-  const getQuestionAnswer = (pair: WordPair): { question: string; answer: string } => {
-    if (direction === 'random') {
-      return Math.random() > 0.5
-        ? { question: pair.termA, answer: pair.termB }
-        : { question: pair.termB, answer: pair.termA };
-    }
-    return direction === 'a-to-b'
-      ? { question: pair.termA, answer: pair.termB }
-      : { question: pair.termB, answer: pair.termA };
-  };
-
   if (isComplete) {
     const stats = getStats();
     const scorePercent = stats.total > 0 ? stats.correct / stats.total : 0;
@@ -186,9 +193,9 @@ export default function PracticeSessionPage({ params }: { params: Promise<{ id: 
     );
   }
 
-  if (!currentPair) return null;
+  if (!currentPair || !questionAnswer) return null;
 
-  const { question, answer: correctAnswer } = getQuestionAnswer(currentPair);
+  const { question, answer: correctAnswer } = questionAnswer;
 
   const commonProps = {
     pair: currentPair,
