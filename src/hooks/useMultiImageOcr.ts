@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { processImage } from '@/lib/ocr';
 import { processImageWithGemini } from '@/lib/ocr-gemini';
-import { parseOcrLines, validateParsedPairs } from '@/lib/ocr-parser';
+import { parseConjugationLines, parseOcrLines, validateParsedPairs } from '@/lib/ocr-parser';
 import { getGeminiApiKey } from '@/lib/settings';
 import type { ParsedWordPair } from '@/types';
 
@@ -112,7 +112,9 @@ export function useMultiImageOcr(): UseMultiImageOcrReturn {
           const ocrResult = await processImage(image.file, languageCode, (p) => {
             setProgress(Math.round(((i + p) / total) * 100));
           });
-          const pairs = parseOcrLines(ocrResult.lines);
+          const pairs = options.conjugation
+            ? parseConjugationLines(ocrResult.lines)
+            : parseOcrLines(ocrResult.lines);
           const { valid, lowConfidence } = validateParsedPairs(pairs);
           allValid.push(...valid);
           allLowConfidence.push(...lowConfidence);

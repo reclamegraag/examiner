@@ -30,8 +30,7 @@ function imageToBase64(image: Blob | File): Promise<{ base64: string; mimeType: 
 
 export interface GeminiOcrOptions {
   /** Verwerk de afbeelding als werkwoordvervoegingstabel i.p.v. vertaalparen.
-   *  termA = het hele/onbepaalde werkwoord, termB = de overige vormen
-   *  (bv. verleden tijd / voltooid deelwoord) samen, gescheiden door " / ". */
+   *  termA = de toetsvraag met werkwoord + persoon/tijd, termB = de vervoegde vorm. */
   conjugation?: boolean;
 }
 
@@ -45,14 +44,18 @@ export async function processImageWithGemini(
   const { base64, mimeType } = await imageToBase64(image);
 
   const prompt = options.conjugation
-    ? `This image shows a verb conjugation table (for example irregular verbs with columns such as Infinitive, Past Simple and Past Participle).
-Extract EVERY verb. Put the base/infinitive form in "termA".
-Combine ALL remaining forms of the same verb (for example past simple and past participle) into "termB", separated by " / ", in the same column order as the table.
-Keep alternative spellings exactly as written (for example "was/were" or "burned/burnt").
-Ignore phonetic or pronunciation transcriptions in square brackets like [biː], column headers, page titles and numbering.
-Each verb must be ONE object; never split tenses of the same verb across rows.
+    ? `This image shows verb conjugations in ${languageA}.
+Extract EVERY testable conjugated form as a separate quiz card.
+For each verb block or table, identify the base/infinitive verb (for example "aller", "gaan", "to go").
+For each subject/person/tense cue, put the quiz question in "termA" as "<base verb>: <cue>".
+Put ONLY the conjugated answer in "termB".
+If a page has multiple tenses or moods, include the tense/mood in the cue, for example "aller: present - il".
+If the page only shows pronouns, use just the pronoun cue, for example "aller: il".
+Keep alternative forms exactly as written, separated as written.
+Ignore translations, phonetic transcriptions in square brackets, explanations, page titles, headers and numbering.
+Return one object per conjugated form; never combine multiple pronouns or tenses into one answer.
 Return ONLY a JSON array of objects with "termA" and "termB".
-Example: [{"termA":"be","termB":"was/were / been"},{"termA":"begin","termB":"began / begun"},{"termA":"come","termB":"came / come"}]`
+Examples: [{"termA":"aller: il","termB":"va"},{"termA":"gaan: ik","termB":"ga"},{"termA":"aller: present - nous","termB":"allons"}]`
     : `Extract ALL word pairs from this vocabulary list image.
 The list contains pairs in two languages: ${languageA} and ${languageB}.
 Return ONLY a JSON array of objects with "termA" (${languageA}) and "termB" (${languageB}).

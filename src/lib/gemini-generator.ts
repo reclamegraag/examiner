@@ -21,8 +21,8 @@ const difficultyLabel: Record<Difficulty, string> = {
 };
 
 export interface GenerateOptions {
-  /** Genereer werkwoordvervoegingen i.p.v. vertaalparen. termA = hele werkwoord,
-   *  termB = de overige vervoegingen (bv. verleden tijd / voltooid deelwoord) samen. */
+  /** Genereer toetskaartjes met werkwoordvervoegingen i.p.v. vertaalparen.
+   *  termA = werkwoord + persoon/tijd, termB = de vervoegde vorm. */
   conjugation?: boolean;
 }
 
@@ -36,16 +36,19 @@ export async function generateWordPairs(
   options: GenerateOptions = {},
 ): Promise<{ termA: string; termB: string }[]> {
   const prompt = options.conjugation
-    ? `Genereer precies ${count} werkwoordvervoegingen in het ${languageA} over het thema "${theme}".
+    ? `Genereer precies ${count} toetskaartjes met werkwoordvervoegingen in het ${languageA} over het thema "${theme}".
 Moeilijkheidsgraad: ${difficultyLabel[difficulty]}
 
-Veel werkwoorden hebben meerdere vormen (bijvoorbeeld hele werkwoord/tegenwoordige tijd, verleden tijd en voltooid deelwoord).
-Zet de hele/onbepaalde vorm in "termA" en voeg ALLE overige vervoegingen samen in "termB", gescheiden door " / ".
-Maak GEEN aparte regel per tijd; combineer alle tijden van hetzelfde werkwoord in één object. Vermijd duplicaten.
+Elke kaart test precies een persoon, tijd of vorm bij een werkwoord.
+Zet de vraag in "termA" als "<hele werkwoord>: <persoon/tijd>".
+Zet alleen de juiste vervoegde vorm in "termB".
+Gebruik bij simpele rijtjes bijvoorbeeld "aller: il" -> "va".
+Als je meerdere tijden gebruikt, neem de tijd op in de cue, bijvoorbeeld "aller: present - nous" -> "allons".
+Maak geen gecombineerde antwoorden met meerdere personen of tijden. Vermijd duplicaten.
 
 Geef ALLEEN een JSON-array terug met objecten met "termA" en "termB".
 Geen uitleg, geen nummering, alleen de JSON-array.
-Voorbeeld: [{"termA":"come","termB":"came / come"},{"termA":"buy","termB":"bought / bought"},{"termA":"choose","termB":"chose / chosen"}]`
+Voorbeeld: [{"termA":"aller: il","termB":"va"},{"termA":"gaan: ik","termB":"ga"},{"termA":"to be: they","termB":"are"}]`
     : `Genereer precies ${count} woordparen over het thema "${theme}".
 Taal A: ${languageA}
 Taal B: ${languageB}

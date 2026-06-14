@@ -40,7 +40,7 @@ export default function GeneratePage() {
   const [isSaving, setIsSaving] = useState(false);
 
   const languageOptions = languages.map(l => ({ value: l.code, label: l.name }));
-  const itemNoun = conjugation ? 'werkwoorden' : 'woordparen';
+  const itemNoun = conjugation ? 'kaartjes' : 'woordparen';
   const countOptions = countValues.map(n => ({ value: String(n), label: `${n} ${itemNoun}` }));
   const apiKey = typeof window !== 'undefined' ? getGeminiApiKey() : null;
 
@@ -197,8 +197,8 @@ export default function GeneratePage() {
                   <span>
                     <span className="block text-sm font-bold text-foreground">Werkwoordvervoegingen</span>
                     <span className="block text-xs text-muted font-medium">
-                      Eén kaartje per werkwoord: het hele werkwoord met daarachter de overige tijden
-                      (bv. verleden tijd / voltooid deelwoord) samen.
+                      Een kaartje per persoon of tijd, bijvoorbeeld &quot;aller: il&quot; met als antwoord
+                      &quot;va&quot;.
                     </span>
                   </span>
                 </label>
@@ -276,8 +276,8 @@ export default function GeneratePage() {
               <WordPairEditor
                 pairs={pairs}
                 onChange={setPairs}
-                languageA={conjugation ? 'Werkwoord' : languageA.toUpperCase()}
-                languageB={conjugation ? 'Vervoegingen' : languageB.toUpperCase()}
+                languageA={conjugation ? 'Vraag' : languageA.toUpperCase()}
+                languageB={conjugation ? 'Antwoord' : languageB.toUpperCase()}
               />
             </Card>
 

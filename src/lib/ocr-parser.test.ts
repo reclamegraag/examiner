@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseOcrLines, validateParsedPairs } from '@/lib/ocr-parser';
+import { parseConjugationLines, parseOcrLines, validateParsedPairs } from '@/lib/ocr-parser';
 import type { OcrLine } from '@/types';
 
 describe('ocr-parser', () => {
@@ -137,6 +137,58 @@ describe('ocr-parser', () => {
       expect(result.valid).toHaveLength(2);
       expect(result.lowConfidence).toHaveLength(1);
       expect(result.lowConfidence[0].termA).toBe('dog');
+    });
+  });
+
+  describe('parseConjugationLines', () => {
+    it('turns a verb block into one quiz card per pronoun', () => {
+      const lines: OcrLine[] = [
+        { text: 'gaan', confidence: 90, words: [] },
+        { text: 'ik ga', confidence: 90, words: [] },
+        { text: 'jij gaat', confidence: 90, words: [] },
+        { text: 'hij gaat', confidence: 90, words: [] },
+      ];
+
+      const result = parseConjugationLines(lines);
+
+      expect(result).toEqual([
+        { termA: 'gaan: ik', termB: 'ga', confidence: 90, line: 1 },
+        { termA: 'gaan: jij', termB: 'gaat', confidence: 90, line: 2 },
+        { termA: 'gaan: hij', termB: 'gaat', confidence: 90, line: 3 },
+      ]);
+    });
+
+    it('parses inline French conjugations', () => {
+      const lines: OcrLine[] = [
+        { text: 'aller: je vais, tu vas, il va, nous allons', confidence: 88, words: [] },
+      ];
+
+      const result = parseConjugationLines(lines);
+
+      expect(result).toEqual([
+        { termA: 'aller: je', termB: 'vais', confidence: 88, line: 0 },
+        { termA: 'aller: tu', termB: 'vas', confidence: 88, line: 0 },
+        { termA: 'aller: il', termB: 'va', confidence: 88, line: 0 },
+        { termA: 'aller: nous', termB: 'allons', confidence: 88, line: 0 },
+      ]);
+    });
+
+    it('parses tables with pronouns as column headers', () => {
+      const lines: OcrLine[] = [
+        { text: 'je tu il nous vous ils', confidence: 80, words: [] },
+        { text: 'aller vais vas va allons allez vont', confidence: 82, words: [] },
+      ];
+
+      const result = parseConjugationLines(lines);
+
+      expect(result).toEqual([
+        { termA: 'aller: je', termB: 'vais', confidence: 80, line: 1 },
+        { termA: 'aller: tu', termB: 'vas', confidence: 80, line: 1 },
+        { termA: 'aller: il', termB: 'va', confidence: 80, line: 1 },
+        { termA: 'aller: nous', termB: 'allons', confidence: 80, line: 1 },
+        { termA: 'aller: vous', termB: 'allez', confidence: 80, line: 1 },
+        { termA: 'aller: ils', termB: 'vont', confidence: 80, line: 1 },
+      ]);
     });
   });
 });

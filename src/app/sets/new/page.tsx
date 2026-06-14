@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Card, Input, Select } from '@/components/ui';
 import { WordPairEditor } from '@/components/sets';
 import { ImagePreviewStack } from '@/components/ocr';
-import { useCreateWordSet, useWordSets, useWordPairs, useCamera } from '@/hooks';
+import { useCreateWordSet, useWordSets, useCamera } from '@/hooks';
 import { useMultiImageOcr } from '@/hooks/useMultiImageOcr';
 import { languages } from '@/lib/languages';
 import { getGeminiApiKey, setGeminiApiKey } from '@/lib/settings';
@@ -54,7 +54,7 @@ export default function NewSetPage() {
     : null;
 
   const effectiveLanguageA = targetSet ? targetSet.languageA : languageA;
-  const effectiveLanguageB = targetSet ? targetSet.languageB : languageB;
+  const effectiveLanguageB = targetSet ? targetSet.languageB : (conjugation ? languageA : languageB);
 
   const setOptions = sets.map(s => ({ value: String(s.id), label: s.name }));
 
@@ -72,7 +72,7 @@ export default function NewSetPage() {
 
   const getOcrLangs = () => {
     const langA = languages.find(l => l.code === effectiveLanguageA);
-    const langB = languages.find(l => l.code === effectiveLanguageB);
+    const langB = languages.find(l => l.code === (conjugation ? effectiveLanguageA : effectiveLanguageB));
     const codeA = langA?.tesseractCode || 'eng';
     const codeB = langB?.tesseractCode || 'nld';
     return codeA === codeB ? codeA : `${codeA}+${codeB}`;
@@ -93,7 +93,9 @@ export default function NewSetPage() {
 
   const handleProcessAll = async () => {
     const langAName = languages.find(l => l.code === effectiveLanguageA)?.name || effectiveLanguageA;
-    const langBName = languages.find(l => l.code === effectiveLanguageB)?.name || effectiveLanguageB;
+    const langBName = conjugation
+      ? langAName
+      : languages.find(l => l.code === effectiveLanguageB)?.name || effectiveLanguageB;
     const result = await processAll(getOcrLangs(), langAName, langBName, { conjugation });
     applyOcrResults(result);
   };
@@ -215,20 +217,29 @@ export default function NewSetPage() {
                   placeholder="bijv. Engels hoofdstuk 5"
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                {conjugation ? (
                   <Select
-                    label="Taal A"
+                    label="Taal van de vervoegingen"
                     value={languageA}
                     onChange={e => setLanguageA(e.target.value)}
                     options={languageOptions}
                   />
-                  <Select
-                    label="Taal B"
-                    value={languageB}
-                    onChange={e => setLanguageB(e.target.value)}
-                    options={languageOptions}
-                  />
-                </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <Select
+                      label="Taal A"
+                      value={languageA}
+                      onChange={e => setLanguageA(e.target.value)}
+                      options={languageOptions}
+                    />
+                    <Select
+                      label="Taal B"
+                      value={languageB}
+                      onChange={e => setLanguageB(e.target.value)}
+                      options={languageOptions}
+                    />
+                  </div>
+                )}
               </>
             )}
 
@@ -311,8 +322,8 @@ export default function NewSetPage() {
               <span>
                 <span className="block text-sm font-bold text-foreground">Werkwoordvervoegingen</span>
                 <span className="block text-xs text-muted font-medium">
-                  Voor een vervoegingstabel (bv. Infinitive / Past Simple / Past Participle): links
-                  het hele werkwoord, rechts de verleden tijd en het voltooid deelwoord samen.
+                  Maakt toetskaartjes per vorm, bijvoorbeeld &quot;aller: il&quot; met als antwoord
+                  &quot;va&quot;.
                 </span>
               </span>
             </label>
@@ -329,8 +340,8 @@ export default function NewSetPage() {
                 <WordPairEditor
                   pairs={pairs}
                   onChange={setPairs}
-                  languageA={effectiveLanguageA.toUpperCase()}
-                  languageB={effectiveLanguageB.toUpperCase()}
+                  languageA={conjugation ? 'Vraag' : effectiveLanguageA.toUpperCase()}
+                  languageB={conjugation ? 'Antwoord' : effectiveLanguageB.toUpperCase()}
                 />
               </motion.div>
             )}
@@ -469,7 +480,7 @@ export default function NewSetPage() {
               {parsedPairs.length > 0 || lowConfidencePairs.length > 0 ? (
                 <>
                   <p className="text-muted text-sm mb-4">
-                    {parsedPairs.length} woordparen herkend
+                    {parsedPairs.length} {conjugation ? 'kaartjes' : 'woordparen'} herkend
                     {lowConfidencePairs.length > 0 && `, ${lowConfidencePairs.length} met lage zekerheid`}
                   </p>
                   <WordPairEditor
@@ -477,8 +488,8 @@ export default function NewSetPage() {
                     onChange={(updated) => {
                       setPairs(updated);
                     }}
-                    languageA={conjugation ? 'Werkwoord' : effectiveLanguageA.toUpperCase()}
-                    languageB={conjugation ? 'Vervoegingen' : effectiveLanguageB.toUpperCase()}
+                    languageA={conjugation ? 'Vraag' : effectiveLanguageA.toUpperCase()}
+                    languageB={conjugation ? 'Antwoord' : effectiveLanguageB.toUpperCase()}
                   />
                 </>
               ) : (
