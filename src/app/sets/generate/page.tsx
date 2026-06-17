@@ -174,14 +174,14 @@ export default function GeneratePage() {
                   <Select
                     label={conjugation ? 'Taal' : 'Van taal'}
                     value={languageA}
-                    onChange={e => setLanguageA(e.target.value)}
+                    onChange={setLanguageA}
                     options={languageOptions}
                   />
                   {!conjugation && (
                     <Select
                       label="Naar taal"
                       value={languageB}
-                      onChange={e => setLanguageB(e.target.value)}
+                      onChange={setLanguageB}
                       options={languageOptions}
                     />
                   )}
@@ -207,13 +207,13 @@ export default function GeneratePage() {
                   <Select
                     label={`Aantal ${itemNoun}`}
                     value={count}
-                    onChange={e => setCount(e.target.value)}
+                    onChange={setCount}
                     options={countOptions}
                   />
                   <Select
                     label="Moeilijkheidsgraad"
                     value={difficulty}
-                    onChange={e => setDifficulty(e.target.value as Difficulty)}
+                    onChange={v => setDifficulty(v as Difficulty)}
                     options={difficultyOptions}
                   />
                 </div>

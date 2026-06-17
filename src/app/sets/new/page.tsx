@@ -205,7 +205,7 @@ export default function NewSetPage() {
               <Select
                 label="Kies set"
                 value={targetSetId ? String(targetSetId) : ''}
-                onChange={e => setTargetSetId(e.target.value ? Number(e.target.value) : null)}
+                onChange={v => setTargetSetId(v ? Number(v) : null)}
                 options={[{ value: '', label: 'Selecteer een set...' }, ...setOptions]}
               />
             ) : (
@@ -221,7 +221,7 @@ export default function NewSetPage() {
                   <Select
                     label="Taal van de vervoegingen"
                     value={languageA}
-                    onChange={e => setLanguageA(e.target.value)}
+                    onChange={setLanguageA}
                     options={languageOptions}
                   />
                 ) : (
@@ -229,13 +229,13 @@ export default function NewSetPage() {
                     <Select
                       label="Taal A"
                       value={languageA}
-                      onChange={e => setLanguageA(e.target.value)}
+                      onChange={setLanguageA}
                       options={languageOptions}
                     />
                     <Select
                       label="Taal B"
                       value={languageB}
-                      onChange={e => setLanguageB(e.target.value)}
+                      onChange={setLanguageB}
                       options={languageOptions}
                     />
                   </div>

@@ -210,10 +210,11 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
             onClick={handleShare}
             icon={<FontAwesomeIcon icon={shareCopied ? faCheck : faShareNodes} fixedWidth />}
           />
-          <Link href={`/sets/${setId}/print`}>
+          <Link href={`/sets/${setId}/print`} className="flex">
             <Button
               variant="secondary"
               size="lg"
+              className="h-full"
               disabled={pairs.length === 0}
               icon={<FontAwesomeIcon icon={faPrint} fixedWidth />}
             />
