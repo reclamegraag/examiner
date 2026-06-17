@@ -24,6 +24,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
   const { pairs } = useWordPairs(setId);
 
   const [layoutId, setLayoutId] = useState('3x4');
+  const [rotated, setRotated] = useState(false);
   const layout = getLayout(layoutId);
   const perSheet = cardsPerSheet(layout);
   const maxFontPt = maxFontSizePt(layout.cols);
@@ -82,6 +83,32 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             ))}
           </div>
 
+          <label className="block text-xs font-bold uppercase tracking-wide text-muted mb-2">
+            Tekstrichting
+          </label>
+          <div className="grid grid-cols-2 gap-2 mb-5">
+            {[
+              { value: false, label: 'Staand' },
+              { value: true, label: 'Liggend' },
+            ].map(opt => (
+              <button
+                key={opt.label}
+                onClick={() => setRotated(opt.value)}
+                className={`px-3 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
+                  rotated === opt.value
+                    ? 'bg-accent-light border-accent text-foreground'
+                    : 'bg-background border-border-bold text-muted hover:text-foreground'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground font-medium mb-5 -mt-2">
+            Liggend draait de tekst een kwartslag. Handig voor lange woorden in
+            smalle kaartjes — voor- en achterkant blijven correct uitgelijnd.
+          </p>
+
           <div className="text-sm text-muted-foreground font-medium space-y-1 mb-5">
             <p>
               <span className="font-bold text-foreground">{sorted.length}</span> woordparen ·{' '}
@@ -139,12 +166,14 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
                 cols={layout.cols}
                 rows={layout.rows}
                 maxFontPt={maxFontPt}
+                rotated={rotated}
               />
               <Sheet
                 cells={backs.map(p => p?.termB ?? '')}
                 cols={layout.cols}
                 rows={layout.rows}
                 maxFontPt={maxFontPt}
+                rotated={rotated}
               />
             </div>
           );
@@ -181,9 +210,13 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
         }
 
         .print-cell-text {
+          /* Breedte wordt per cel via JS gezet (auto-fit), dus niet door flex
+             laten krimpen — anders klopt de gemeten regelbreedte niet. */
+          flex: 0 0 auto;
           width: 100%;
           text-align: center;
           line-height: 1.15;
+          transform-origin: center center;
           /* Breek alleen op spaties — nooit middenin een woord. De auto-fit
              verkleint de tekst tot ze netjes in de cel past. */
           white-space: normal;
@@ -261,11 +294,13 @@ function Sheet({
   cols,
   rows,
   maxFontPt,
+  rotated,
 }: {
   cells: string[];
   cols: number;
   rows: number;
   maxFontPt: number;
+  rotated: boolean;
 }) {
   return (
     <div className="print-sheet">
@@ -278,7 +313,7 @@ function Sheet({
       >
         {cells.map((text, i) => (
           <div key={i} className="print-cell">
-            <AutoFitText text={text} maxPt={maxFontPt} />
+            <AutoFitText text={text} maxPt={maxFontPt} rotated={rotated} />
           </div>
         ))}
       </div>
@@ -294,8 +329,22 @@ function Sheet({
  *
  * Omdat zowel het scherm als de afdruk dezelfde absolute eenheden (mm/pt)
  * gebruiken, klopt de op het scherm berekende grootte ook bij het printen.
+ *
+ * Bij `rotated` wordt de tekst een kwartslag gedraaid (liggend). Voor- en
+ * achterkant gebruiken bewust dezelfde draairichting: elke zijde wordt los van
+ * elkaar recht bekeken, dus net als bij rechte tekst leest beide kanten goed.
+ * De positie-spiegeling voor dubbelzijdig printen zit in `backOrder` en blijft
+ * ongewijzigd, zodat elke achterkant achter de eigen voorkant valt.
  */
-function AutoFitText({ text, maxPt }: { text: string; maxPt: number }) {
+function AutoFitText({
+  text,
+  maxPt,
+  rotated,
+}: {
+  text: string;
+  maxPt: number;
+  rotated: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -309,9 +358,20 @@ function AutoFitText({ text, maxPt }: { text: string; maxPt: number }) {
 
     const fit = () => {
       const cs = getComputedStyle(cell);
+      const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
       const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      const availW = cell.clientWidth - padX;
       const availH = cell.clientHeight - padY;
-      if (availH <= 0 || el.clientWidth <= 0) return;
+      if (availW <= 0 || availH <= 0) return;
+
+      // Bij liggende tekst wisselen de lengte- en dwarsrichting om: de regels
+      // lopen langs de hoogte van de cel en de tekst mag zo "breed" worden als
+      // de cel hoog is. De rotatie zelf (transform) verandert de lay-outdozen
+      // niet, dus meten we in de niet-gedraaide ruimte met omgewisselde maten.
+      const along = rotated ? availH : availW; // regelbreedte (leesrichting)
+      const across = rotated ? availW : availH; // totale teksthoogte (dwars)
+
+      el.style.width = `${along}px`;
 
       // Begin zonder afbreken; alleen als zelfs de kleinste maat een enkel woord
       // niet kan laten passen, staan we afbreken toe als laatste redmiddel.
@@ -323,7 +383,7 @@ function AutoFitText({ text, maxPt }: { text: string; maxPt: number }) {
       for (let i = 0; i < 9; i++) {
         const mid = (lo + hi) / 2;
         el.style.fontSize = `${mid}pt`;
-        const fits = el.scrollWidth <= el.clientWidth + 0.5 && el.scrollHeight <= availH + 0.5;
+        const fits = el.scrollWidth <= el.clientWidth + 0.5 && el.scrollHeight <= across + 0.5;
         if (fits) {
           best = mid;
           lo = mid;
@@ -334,7 +394,7 @@ function AutoFitText({ text, maxPt }: { text: string; maxPt: number }) {
       el.style.fontSize = `${best}pt`;
 
       // Laatste redmiddel: één extreem lang woord dat zelfs op de minimummaat
-      // breder is dan de cel — dan toch laten afbreken zodat niets wegvalt.
+      // breder is dan de regel — dan toch laten afbreken zodat niets wegvalt.
       if (el.scrollWidth > el.clientWidth + 0.5) {
         el.style.overflowWrap = 'break-word';
       }
@@ -344,10 +404,17 @@ function AutoFitText({ text, maxPt }: { text: string; maxPt: number }) {
     const observer = new ResizeObserver(fit);
     observer.observe(cell);
     return () => observer.disconnect();
-  }, [text, maxPt]);
+  }, [text, maxPt, rotated]);
 
   return (
-    <div ref={ref} className="print-cell-text" style={{ fontSize: `${maxPt}pt` }}>
+    <div
+      ref={ref}
+      className="print-cell-text"
+      style={{
+        fontSize: `${maxPt}pt`,
+        transform: rotated ? 'rotate(-90deg)' : undefined,
+      }}
+    >
       {text}
     </div>
   );
