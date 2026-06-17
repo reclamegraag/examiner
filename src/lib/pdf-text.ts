@@ -3,6 +3,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import type { OcrLine } from '@/types';
+import { reconstructPageLines, type PdfTextChunk } from './pdf-layout';
 
 // Use the bundled worker; Turbopack/Webpack resolve this URL at build time.
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -24,8 +25,9 @@ export class PdfNoTextError extends Error {
 /**
  * Extracts text lines from a PDF that contains a real (selectable) text layer.
  *
- * Lines are reconstructed from PDF.js text items: each item carries a `hasEOL`
- * flag that marks the end of a visual line. Pages are concatenated in order.
+ * Each page's positioned text chunks are reconstructed into table rows by
+ * {@link reconstructPageLines}, which keeps two columns apart and discards
+ * out-of-table text. Pages are processed independently and concatenated.
  *
  * Throws {@link PdfNoTextError} when the document has no extractable text — i.e.
  * a scanned/image-only PDF that needs OCR instead.
@@ -36,25 +38,30 @@ export async function extractPdfTextLines(file: File | Blob): Promise<OcrLine[]>
   const doc = await loadingTask.promise;
 
   const lines: OcrLine[] = [];
+  let hadAnyText = false;
 
   try {
     for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
       const page = await doc.getPage(pageNum);
       const content = await page.getTextContent();
 
-      let current = '';
+      const chunks: PdfTextChunk[] = [];
       for (const item of content.items) {
         // Marked-content items have no `str`; only text items do.
         if (!('str' in item)) continue;
         const text = item as TextItem;
-        current += text.str;
-        if (text.hasEOL) {
-          lines.push({ text: current.trim(), confidence: 100, words: [] });
-          current = '';
-        }
+        if (text.str.trim().length > 0) hadAnyText = true;
+        chunks.push({
+          str: text.str,
+          x: text.transform[4],
+          y: text.transform[5],
+          w: text.width,
+          h: text.height,
+        });
       }
-      if (current.trim()) {
-        lines.push({ text: current.trim(), confidence: 100, words: [] });
+
+      for (const line of reconstructPageLines(chunks)) {
+        lines.push({ text: line, confidence: 100, words: [] });
       }
 
       page.cleanup();
@@ -63,10 +70,10 @@ export async function extractPdfTextLines(file: File | Blob): Promise<OcrLine[]>
     await loadingTask.destroy();
   }
 
-  const meaningful = lines.filter(l => l.text.length > 0);
-  if (meaningful.length === 0) {
+  // No selectable text at all → scanned/image-only PDF that needs OCR.
+  if (!hadAnyText) {
     throw new PdfNoTextError();
   }
 
-  return meaningful;
+  return lines;
 }
