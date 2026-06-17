@@ -209,6 +209,8 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
           body {
             background: #ffffff !important;
             background-image: none !important;
+            /* Voorkom dat de schermhoogte (100vh) een extra lege pagina forceert. */
+            min-height: 0 !important;
           }
           /* Verberg de app-chrome en schermbesturing tijdens het printen */
           nav,
@@ -218,11 +220,18 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
           main {
             padding: 0 !important;
             margin: 0 !important;
+            min-height: 0 !important;
           }
           .print-root {
             display: block;
           }
           .print-sheet {
+            /* Iets onder de volle A4-hoogte zodat sub-pixel-afronding nooit een
+               flinter naar een tweede pagina duwt. Elk vel blijft één A4-pagina. */
+            height: 296mm;
+            overflow: hidden;
+            break-inside: avoid;
+            page-break-inside: avoid;
             break-after: page;
             page-break-after: always;
             -webkit-print-color-adjust: exact;
