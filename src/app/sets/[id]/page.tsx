@@ -199,30 +199,30 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
         </Card>
 
         <div className="flex gap-3 mb-6">
-          <Link href={`/sets/${setId}/practice`} className="flex-1 min-w-0">
-            <Button size="lg" className="w-full" icon={<FontAwesomeIcon icon={faPlay} />}>
-              Start oefenen
+          <Link href={`/sets/${setId}/practice`} className="flex-1 min-w-0 portrait:flex-none">
+            <Button size="lg" className="w-full portrait:w-auto" icon={<FontAwesomeIcon icon={faPlay} fixedWidth />}>
+              <span className="portrait:hidden">Start oefenen</span>
             </Button>
           </Link>
           <Button
             variant="secondary"
             size="lg"
             onClick={handleShare}
-            icon={<FontAwesomeIcon icon={shareCopied ? faCheck : faShareNodes} />}
+            icon={<FontAwesomeIcon icon={shareCopied ? faCheck : faShareNodes} fixedWidth />}
           />
           <Link href={`/sets/${setId}/print`}>
             <Button
               variant="secondary"
               size="lg"
               disabled={pairs.length === 0}
-              icon={<FontAwesomeIcon icon={faPrint} />}
+              icon={<FontAwesomeIcon icon={faPrint} fixedWidth />}
             />
           </Link>
           <Button
             variant="secondary"
             size="lg"
             onClick={() => setAddModal(true)}
-            icon={<FontAwesomeIcon icon={faPlus} />}
+            icon={<FontAwesomeIcon icon={faPlus} fixedWidth />}
           />
         </div>
 
