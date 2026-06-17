@@ -63,10 +63,19 @@ export function backOrder<T>(page: T[], cols: number): T[] {
   return result;
 }
 
-/** Passende lettergrootte (pt) op basis van het aantal kolommen. */
-export function fontSizePt(cols: number): number {
-  if (cols <= 2) return 20;
-  if (cols === 3) return 16;
-  if (cols === 4) return 13;
-  return 10;
+/**
+ * Bovengrens voor de lettergrootte (pt) op basis van het aantal kolommen.
+ *
+ * Dit is bewust ruim: korte woorden mogen lekker groot worden weergegeven. De
+ * uiteindelijke grootte wordt per kaartje automatisch verkleind zodat ook lange
+ * woorden of zinnen netjes in de cel passen (zie de auto-fit in de printpagina).
+ */
+export function maxFontSizePt(cols: number): number {
+  if (cols <= 2) return 32;
+  if (cols === 3) return 26;
+  if (cols === 4) return 20;
+  return 14;
 }
+
+/** Ondergrens voor de auto-fit zodat tekst nooit onleesbaar klein wordt. */
+export const MIN_FONT_SIZE_PT = 6;

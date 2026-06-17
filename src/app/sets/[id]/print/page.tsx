@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useRef, useLayoutEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { useWordSet, useWordPairs } from '@/hooks';
@@ -12,7 +12,8 @@ import {
   cardsPerSheet,
   paginate,
   backOrder,
-  fontSizePt,
+  maxFontSizePt,
+  MIN_FONT_SIZE_PT,
 } from '@/lib/flashcard-print';
 
 export default function PrintPage({ params }: { params: Promise<{ id: string }> }) {
@@ -25,7 +26,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
   const [layoutId, setLayoutId] = useState('3x4');
   const layout = getLayout(layoutId);
   const perSheet = cardsPerSheet(layout);
-  const fontPt = fontSizePt(layout.cols);
+  const maxFontPt = maxFontSizePt(layout.cols);
 
   // Stabiele volgorde, los van de Dexie-query-volgorde.
   const sorted = [...pairs].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
@@ -137,13 +138,13 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
                 cells={fronts.map(p => p?.termA ?? '')}
                 cols={layout.cols}
                 rows={layout.rows}
-                fontPt={fontPt}
+                maxFontPt={maxFontPt}
               />
               <Sheet
                 cells={backs.map(p => p?.termB ?? '')}
                 cols={layout.cols}
                 rows={layout.rows}
-                fontPt={fontPt}
+                maxFontPt={maxFontPt}
               />
             </div>
           );
@@ -174,13 +175,21 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
           display: flex;
           align-items: center;
           justify-content: center;
-          text-align: center;
           padding: 3mm;
           overflow: hidden;
-          word-break: break-word;
-          hyphens: auto;
           color: #000000;
-          line-height: 1.2;
+        }
+
+        .print-cell-text {
+          width: 100%;
+          text-align: center;
+          line-height: 1.15;
+          /* Breek alleen op spaties — nooit middenin een woord. De auto-fit
+             verkleint de tekst tot ze netjes in de cel past. */
+          white-space: normal;
+          overflow-wrap: normal;
+          word-break: normal;
+          hyphens: none;
         }
 
         @media screen {
@@ -251,12 +260,12 @@ function Sheet({
   cells,
   cols,
   rows,
-  fontPt,
+  maxFontPt,
 }: {
   cells: string[];
   cols: number;
   rows: number;
-  fontPt: number;
+  maxFontPt: number;
 }) {
   return (
     <div className="print-sheet">
@@ -268,11 +277,78 @@ function Sheet({
         }}
       >
         {cells.map((text, i) => (
-          <div key={i} className="print-cell" style={{ fontSize: `${fontPt}pt` }}>
-            {text}
+          <div key={i} className="print-cell">
+            <AutoFitText text={text} maxPt={maxFontPt} />
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Toont tekst en verkleint de lettergrootte automatisch (binaire zoektocht)
+ * tot het hele woord/de hele zin zonder overloop binnen de cel past. Korte
+ * woorden blijven groot en goed leesbaar; lange woorden of zinnen krimpen
+ * netjes mee in plaats van lelijk middenin een woord af te breken.
+ *
+ * Omdat zowel het scherm als de afdruk dezelfde absolute eenheden (mm/pt)
+ * gebruiken, klopt de op het scherm berekende grootte ook bij het printen.
+ */
+function AutoFitText({ text, maxPt }: { text: string; maxPt: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const cell = el.parentElement;
+    if (!cell || !text) {
+      if (el) el.style.fontSize = `${maxPt}pt`;
+      return;
+    }
+
+    const fit = () => {
+      const cs = getComputedStyle(cell);
+      const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      const availH = cell.clientHeight - padY;
+      if (availH <= 0 || el.clientWidth <= 0) return;
+
+      // Begin zonder afbreken; alleen als zelfs de kleinste maat een enkel woord
+      // niet kan laten passen, staan we afbreken toe als laatste redmiddel.
+      el.style.overflowWrap = 'normal';
+
+      let lo = MIN_FONT_SIZE_PT;
+      let hi = maxPt;
+      let best = MIN_FONT_SIZE_PT;
+      for (let i = 0; i < 9; i++) {
+        const mid = (lo + hi) / 2;
+        el.style.fontSize = `${mid}pt`;
+        const fits = el.scrollWidth <= el.clientWidth + 0.5 && el.scrollHeight <= availH + 0.5;
+        if (fits) {
+          best = mid;
+          lo = mid;
+        } else {
+          hi = mid;
+        }
+      }
+      el.style.fontSize = `${best}pt`;
+
+      // Laatste redmiddel: één extreem lang woord dat zelfs op de minimummaat
+      // breder is dan de cel — dan toch laten afbreken zodat niets wegvalt.
+      if (el.scrollWidth > el.clientWidth + 0.5) {
+        el.style.overflowWrap = 'break-word';
+      }
+    };
+
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(cell);
+    return () => observer.disconnect();
+  }, [text, maxPt]);
+
+  return (
+    <div ref={ref} className="print-cell-text" style={{ fontSize: `${maxPt}pt` }}>
+      {text}
     </div>
   );
 }
