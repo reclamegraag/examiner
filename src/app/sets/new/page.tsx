@@ -8,6 +8,7 @@ import { WordPairEditor } from '@/components/sets';
 import { ImagePreviewStack } from '@/components/ocr';
 import { useCreateWordSet, useWordSets, useCamera } from '@/hooks';
 import { useMultiImageOcr } from '@/hooks/useMultiImageOcr';
+import { parseOcrLines, parseConjugationLines } from '@/lib/ocr-parser';
 import { languages } from '@/lib/languages';
 import { getGeminiApiKey, setGeminiApiKey } from '@/lib/settings';
 import { deduplicateWordPairs } from '@/lib/dedup';
@@ -42,6 +43,8 @@ export default function NewSetPage() {
   const [conjugation, setConjugation] = useState(false);
   const [apiKey, setApiKeyValue] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [isPdfProcessing, setIsPdfProcessing] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,8 +84,42 @@ export default function NewSetPage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    addImages(Array.from(files));
+    setUploadError(null);
+    const all = Array.from(files);
+    const pdfs = all.filter(f => f.type === 'application/pdf');
+    const imgs = all.filter(f => f.type !== 'application/pdf');
+    if (imgs.length > 0) addImages(imgs);
+    if (pdfs.length > 0) handlePdfFiles(pdfs);
     e.target.value = '';
+  };
+
+  const handlePdfFiles = async (pdfs: File[]) => {
+    setIsPdfProcessing(true);
+    setUploadError(null);
+    try {
+      const { extractPdfTextLines } = await import('@/lib/pdf-text');
+      const lines = (await Promise.all(pdfs.map(f => extractPdfTextLines(f)))).flat();
+      const parsed = conjugation ? parseConjugationLines(lines) : parseOcrLines(lines);
+      const validPairs = parsed
+        .filter(p => p.termA.trim() && p.termB.trim())
+        .map(p => ({ termA: p.termA, termB: p.termB }));
+
+      if (validPairs.length === 0) {
+        setUploadError(
+          'Er is wel tekst in de PDF gevonden, maar geen woordparen. Zorg dat elke regel ' +
+            'een woord en de vertaling bevat, bijvoorbeeld "hond - dog" of twee kolommen.',
+        );
+        return;
+      }
+
+      setPairs(validPairs);
+      setInputMode('manual');
+    } catch (err) {
+      // PdfNoTextError signals a scanned/image-only PDF; show its guidance verbatim.
+      setUploadError(err instanceof Error ? err.message : 'De PDF kon niet worden gelezen.');
+    } finally {
+      setIsPdfProcessing(false);
+    }
   };
 
   const handleCapture = async () => {
@@ -357,7 +394,7 @@ export default function NewSetPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,application/pdf"
                   multiple
                   onChange={handleFileUpload}
                   className="hidden"
@@ -365,11 +402,18 @@ export default function NewSetPage() {
                 <Button
                   variant="secondary"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isProcessing}
+                  disabled={isProcessing || isPdfProcessing}
                   icon={<FontAwesomeIcon icon={faImage} />}
                 >
-                  Kies afbeeldingen
+                  Kies afbeeldingen of PDF
                 </Button>
+
+                {isPdfProcessing && (
+                  <p className="text-sm text-muted mt-4">
+                    <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                    PDF lezen...
+                  </p>
+                )}
 
                 <ImagePreviewStack
                   images={images}
@@ -401,6 +445,7 @@ export default function NewSetPage() {
                 )}
 
                 {ocrError && <p className="text-error mt-2 text-sm">{ocrError}</p>}
+                {uploadError && <p className="text-error mt-4 text-sm">{uploadError}</p>}
               </motion.div>
             )}
 
