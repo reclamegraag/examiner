@@ -8,7 +8,7 @@ import { Button, Card, Modal, ProgressBar } from '@/components/ui';
 import { WordPairEditor, WordPairRow } from '@/components/sets';
 import { useWordSet, useWordPairs, useUpdateWordSet, useDeleteWordSet, useAddWordPair, useDeleteWordPair, useUpdateWordPair } from '@/hooks';
 import type { WordPair } from '@/types';
-import { faPlay, faEdit, faTrash, faPlus, faArrowLeft, faShareNodes, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faPlay, faEdit, faTrash, faPlus, faArrowLeft, faShareNodes, faCheck, faPrint } from '@fortawesome/free-solid-svg-icons';
 import { buildShareUrl } from '@/lib/share';
 import type { SharePayload } from '@/lib/share';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -210,6 +210,14 @@ export default function SetDetailPage({ params }: { params: Promise<{ id: string
             onClick={handleShare}
             icon={<FontAwesomeIcon icon={shareCopied ? faCheck : faShareNodes} />}
           />
+          <Link href={`/sets/${setId}/print`}>
+            <Button
+              variant="secondary"
+              size="lg"
+              disabled={pairs.length === 0}
+              icon={<FontAwesomeIcon icon={faPrint} />}
+            />
+          </Link>
           <Button
             variant="secondary"
             size="lg"
